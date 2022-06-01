@@ -1,0 +1,521 @@
+﻿using System.Drawing;
+using System.Drawing.Drawing2D;
+
+using AimuBot.Core.Extensions;
+using AimuBot.Core.Message;
+using AimuBot.Core.Message.Model;
+using AimuBot.Core.ModuleMgr;
+using AimuBot.Core.Utils;
+using AimuBot.Modules.Arcaea.AuaJson;
+
+using LunaUI;
+using LunaUI.Layouts;
+
+#pragma warning disable CA1416
+#pragma warning disable CS8602
+
+namespace AimuBot.Modules.Arcaea;
+
+public partial class Arcaea : ModuleBase
+{
+    private static readonly Dictionary<int, string> _b30Styles = new()
+    {
+        { 0, "列表样式" },
+        { 1, "图标样式" },
+        { 2, "列表样式" },
+    };
+
+    [Command("ac b30 set v",
+        Name = "设置b30样式",
+        Description = "设置b30样式（推荐v2)",
+        Tip = "/ac b30 set <style>",
+        Example = "/ac b30 set v2",
+        Category = "Arcaea",
+        Matching = Matching.StartsWith,
+        SendType = SendType.Reply)]
+    public MessageChain OnSetB30CardType(BotMessage msg)
+    {
+        if (msg.Content.IsNullOrEmpty())
+            return "";
+
+        int t = Convert.ToInt32(msg.Content);
+        if (t >= 0 && t < _b30Styles.Count)
+        {
+            _db.SaveInt(msg.SenderId, "b30_type", t);
+            return $"recent 样式已设置为 v{t}：{_b30Styles[t]}";
+        }
+        else
+        {
+            return "请使用 /ac b30 set <style_id> 设置 b30 卡片样式。\n" +
+                string.Join("\n", _b30Styles.Select((k, v) => v));
+        }
+    }
+
+    [Command("ac b30",
+        Name = "查询b30",
+        Description = "查询b30",
+        Tip = "/ac b30",
+        Example = "/ac b30",
+        Category = "Arcaea",
+        CooldownType = CooldownType.User,
+        CooldownSecond = 30,
+        Matching = Matching.Full,
+        SendType = SendType.Reply)]
+    public async Task<MessageChain> OnB30(BotMessage msg)
+    {
+        string? content = msg.Content;
+
+        var bindInfo = GetArcId(msg.SenderId);
+
+        if (bindInfo == null)
+            return "未绑定或id错误\n请使用/ac bind [arcaea数字id] 进行绑定";
+
+        content = bindInfo.bind_type == 1 ? bindInfo.name : bindInfo.arc_id;
+
+        var response = await GetB30ResponseFromAua(content);
+
+        bindInfo.arc_id = response.Content.AccountInfo.Code;
+        bindInfo.name = response.Content.AccountInfo.Name;
+        _db.SaveObject(bindInfo);
+
+        var accountInfo = response.Content.AccountInfo;
+
+        for (int i = 0; i < response.Content.Best30List.Count; i++)
+        {
+            var play_record = response.Content.Best30List[i];
+            UpdatePlayerScoreRecord(accountInfo, play_record);
+        }
+
+        PttHistoryDesc pttHistoryDesc = new()
+        {
+            arc_id = accountInfo.Code,
+            ptt = accountInfo.RealRating,
+            b30 = response.Content.Best30Avg,
+            r10 = response.Content.Recent10Avg,
+            time = (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalMilliseconds,
+            type = 0,
+        };
+        _db.SaveObject(pttHistoryDesc);
+
+        try
+        {
+            bool succ = GetB30ImageFile(response, BotUtil.CombinePath("Arcaea/tmp_b30.jpg"), bindInfo.b30_type);
+            if (succ)
+            {
+                return new MessageBuilder(ImageChain.Create("Arcaea/tmp_b30.jpg")).Build();
+            }
+        }
+        catch (Exception ex)
+        {
+            return $"error: {ex.Message}";
+        }
+        return "";
+    }
+
+    public bool GetB30ImageFile(Response r, string path, int version)
+    {
+        var im = version switch
+        {
+            0 => GetB30_v2(r),
+            1 => GetB30_v1_Icon(r),
+            2 => GetB30_v2(r),
+            _ => null
+        };
+
+        if (im != null)
+        {
+            im.SaveToJpg(BotUtil.CombinePath(path), 95);
+            return true;
+        }
+        return false;
+    }
+
+    public Image? GetB30_v2(Response r)
+    {
+        var content = r.Content;
+        if (content == null)
+            return null;
+
+        if (content.AccountInfo == null)
+            return null;
+
+        LunaUI.LunaUI ui = new(Core.AimuBot.Config.ResourcePath, "Arcaea/ui/b30_v2.json");
+
+        ui.GetNodeByPath<LuiText>("title/char_bg/name").Text = content.AccountInfo.Name;
+
+        if (content.AccountInfo.Rating >= 0)
+        {
+            ui.GetNodeByPath<LuiText>("title/char_bg/ptt_bg/ptt_l").Text = (content.AccountInfo.Rating / 100).ToString() + ".";
+            ui.GetNodeByPath<LuiText>("title/char_bg/ptt_bg/ptt_r").Text = (content.AccountInfo.Rating % 100).ToString("D2");
+        }
+        else
+        {
+            ui.GetNodeByPath<LuiText>("title/char_bg/ptt_bg/ptt_l").Text = "--";
+            ui.GetNodeByPath<LuiText>("title/char_bg/ptt_bg/ptt_l").Position = new Point(-18, -2);
+            ui.GetNodeByPath<LuiText>("title/char_bg/ptt_bg/ptt_r").PlaceHolder = "";
+        }
+
+        string rating_bg_no = content.AccountInfo.Rating switch
+        {
+            < 0 => "off",
+            >= 1250 => "6",
+            >= 1200 => "5",
+            >= 1100 => "4",
+            >= 1000 => "3",
+            >= 800 => "2",
+            >= 500 => "1",
+            _ => "0"
+        };
+        ui.GetNodeByPath<LuiImage>("title/char_bg/ptt_bg").ImagePath = $"Arcaea/assets/img/rating_{rating_bg_no}.png";
+
+        string sn = content.AccountInfo.IsCharUncapped ? "u" : "";
+        ui.GetNodeByPath<LuiImage>("title/char_bg/char").ImagePath =
+            $"Arcaea/assets/char/{content.AccountInfo.Character}{sn}_icon.png";
+
+
+        ui.GetNodeByPath<LuiText>("title/b30").Text = $"Best30 {content.Best30Avg:F3}";
+        ui.GetNodeByPath<LuiText>("title/r10").Text = $"Recent10 {content.Recent10Avg:F3}";
+        if (content.AccountInfo.Rating >= 0)
+        {
+            double max_r10 = 0;
+            for (int i = 0; i < content.Best30List.Count && i < 10; i++)
+            {
+                max_r10 += content.Best30List[i].Rating;
+            }
+            double max_ptt = (content.Best30Avg * 30 + max_r10) / 40;
+            ui.GetNodeByPath<LuiText>("title/b30max").Text = $"MaxPtt {max_ptt:F3}";
+        }
+        else
+        {
+            ui.GetNodeByPath<LuiText>("title/b30max").Text = " ";
+        }
+
+
+        var b30_table = ui.GetNodeByPath<LuiCloneTableLayout>("b30_table");
+        b30_table.CloneLayouts(30, "block_");
+
+        for (int i = 0; i < content.Best30List.Count && i < 30; i++)
+        {
+            var play_info = content.Best30List[i];
+            var song_info_raw = _songInfoRaw[play_info.SongId];
+
+            ui.GetNodeByPath<LuiImage>($"b30_table/block_{i}/cover").ImagePath = song_info_raw.GetCover(play_info.Difficulty);
+
+            var song_info_raw_diff = song_info_raw.Difficulties[play_info.Difficulty];
+            string card_name = $"b30_table/block_{i}/name";
+
+            var (songNameFont, songNameText) = song_info_raw.GetSongFontAndName(play_info.Difficulty);
+            ui.GetNodeByPath<LuiText>(card_name).Font = songNameFont;
+            ui.GetNodeByPath<LuiText>(card_name).Text = songNameText;
+
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/score").Text = play_info.Score.ToString("D8").Insert(5, "\'").Insert(2, "\'");
+
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/idx").Text = $"#{i + 1}";
+
+            float rating_f = GetRating(play_info.SongId, play_info.Difficulty);
+            string rating_str = "";
+            if (rating_f > 0)
+            {
+                rating_str = rating_f.ToString("F1");
+            }
+            else
+            {
+                rating_str = song_info_raw_diff.Rating.ToString();
+                if (song_info_raw_diff.RatingPlus)
+                    rating_str += "+";
+            }
+
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/rating").Text = $"{rating_str} > {play_info.Rating:F3}";
+
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/perf/pure").Text = play_info.PerfectCount.ToString();
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/perf/good").Text = (play_info.PerfectCount - play_info.ShinyPerfectCount).ToString();
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/perf/far").Text = play_info.NearCount.ToString();
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/perf/lost").Text = play_info.MissCount.ToString();
+
+            var song_dt = DateTimeOffset.FromUnixTimeMilliseconds(play_info.TimePlayed).LocalDateTime;
+            var ts = DateTime.Now - song_dt;
+            string time_s = ts.TotalMinutes switch
+            {
+                > 1440 => $"{(int)ts.TotalMinutes / 1440}d",
+                > 60 => $"{(int)ts.TotalMinutes / 60}h",
+                > 1 => $"{(int)ts.TotalMinutes}m",
+                _ => "now"
+            };
+            ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/date").Text = time_s;
+
+            var (diff_str, diff_color) = play_info.Difficulty switch
+            {
+                0 => ("Past", Color.Blue),
+                1 => ("Present", Color.ForestGreen),
+                2 => ("Future", Color.FromArgb(196, 22, 174)),
+                3 => ("Beyond", Color.FromArgb(192, 0, 0)),
+                _ => ("Unknown", Color.Black)
+            };
+
+            Color d_color = Color.FromArgb(64, diff_color);
+            ui.GetNodeByPath<LuiColorLayer>($"b30_table/block_{i}/title").Color = d_color;
+            ui.GetNodeByPath<LuiColorLayer>($"b30_table/block_{i}/shade_1").Color = d_color;
+            ui.GetNodeByPath<LuiColorLayer>($"b30_table/block_{i}/shade_2").Color = d_color;
+        }
+
+        Image im = new Bitmap(ui.Root.Option.CanvasSize.Width * 80 / 100, ui.Root.Option.CanvasSize.Height * 80 / 100);
+        var origin = ui.Render();
+        using (Graphics g = Graphics.FromImage(im))
+        {
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.DrawImage(origin,
+                Rectangle.FromLTRB(0, 0, im.Width, im.Height),
+                Rectangle.FromLTRB(0, 0, origin.Width, origin.Height),
+                GraphicsUnit.Pixel);
+        }
+
+        return im;
+    }
+
+    public Image GetB30_v1_Icon(Response r)
+    {
+        Image img = new Bitmap(1284, 2778);
+        using (Graphics g = Graphics.FromImage(img))
+        {
+            g.Clear(Color.White);
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+            g.TextContrast = 8;
+            SolidBrush sb = new SolidBrush(Color.White);
+
+            Image bg = Image.FromFile(Core.AimuBot.Config.ResourcePath.CombinePath("Arcaea/assets/startup/bg.jpg"));
+            double _rate_x = (double)bg.Width / 1284;
+            double _rate_y = (double)bg.Height / 2778;
+            if (_rate_x < _rate_y)
+            {
+                int _w = (int)(1284 * _rate_y);
+                int _x = bg.Width - _w;
+                g.DrawImage(bg, Rectangle.FromLTRB(0, 0, 1284, 2778), Rectangle.FromLTRB(_x + _w / 2, _w, 0, bg.Height), GraphicsUnit.Pixel);
+            }
+            else
+            {
+                double _y = 2778 * _rate_x;
+                g.DrawImage(bg, Rectangle.FromLTRB(0, 0, 1284, 2778), Rectangle.FromLTRB(0, 0, bg.Width, bg.Height), GraphicsUnit.Pixel);
+            }
+
+            sb.Color = Color.FromArgb(128, 0, 0, 0);
+            g.FillRectangle(sb, 0, 0, 1284, 2778);
+
+            for (int i = -2; i < r.Content.Best30List.Count; i++)
+            {
+                PlayRecord? single = null;
+                if (i >= 0)
+                    single = r.Content.Best30List[i];
+                var sim = GetB30_v1_Icon_Single(i, r.Content, single);
+                int _i = i + 2;
+                int x = _i % 4;
+                int y = _i / 4;
+                g.DrawImage(sim, (1284 - 290 * 4) / 2 + x * 290, y * 321 + 120);
+            }
+
+            FontFamily f = new FontFamily("GeosansLight");
+            Font ft = new Font(f, 40f, FontStyle.Regular);
+            StringFormat sf = new StringFormat();
+            sf.Alignment = StringAlignment.Near;
+
+            sb.Color = Color.White;
+            var dt = DateTime.Now;
+            g.DrawString($"{dt.Hour:D2}:{dt.Minute:D2}", ft, sb, Rectangle.FromLTRB(109, 53, 109 + 400, 53 + 60), sf);
+            g.DrawString("Aimubot", ft, sb, Rectangle.FromLTRB(1015, 53, 1039 + 400, 53 + 60), sf);
+        }
+        return img;
+    }
+
+    public Image GetB30_v1_Icon_Single(int id, Content r, PlayRecord pr)
+    {
+        Image img = new Bitmap(300, 320);
+        using (Graphics g = Graphics.FromImage(img))
+        {
+            //g.Clear(Color.Black);
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+            //g.TextContrast = 8;
+
+            int x = 300 / 2 - 220 / 2;
+            var gp = GetRoundedRect(Rectangle.FromLTRB(x, x, x + 220, x + 220), 40);
+
+            SolidBrush sb = new SolidBrush(Color.White);
+            FontFamily f = new FontFamily("Exo");
+            Font ft = new Font(f, 24f, FontStyle.Bold);
+            StringFormat sf = new StringFormat();
+            sf.Alignment = StringAlignment.Center;
+
+            if (id == -2)
+            {
+                sb.Color = Color.FromArgb(64, 255, 255, 255);
+                g.FillPath(sb, gp);
+
+                string? _f = Core.AimuBot.Config.ResourcePath.CombinePath($"Arcaea/assets/char/{r.AccountInfo.Character}_icon.png");
+                FileInfo fi = new FileInfo(_f);
+                if (fi.Exists)
+                {
+                    Image im = Image.FromFile(_f);
+                    int _s = 190;
+                    int xc = 300 / 2 - _s / 2;
+                    g.DrawImage(im, Rectangle.FromLTRB(xc, xc, xc + _s, xc + _s), Rectangle.FromLTRB(0, 0, im.Width, im.Height), GraphicsUnit.Pixel);
+                }
+
+                sb.Color = Color.White;
+                g.DrawString(r.AccountInfo.Name, ft, sb, Rectangle.FromLTRB(0, x + 220 + 5, 300, 330), sf);
+            }
+            if (id == -1)
+            {
+                sb.Color = Color.FromArgb(64, 255, 255, 255);
+                g.FillPath(sb, gp);
+
+                int rt = r.AccountInfo.Rating switch
+                {
+                    < 0 => -1,
+                    < 350 => 0,
+                    < 700 => 1,
+                    < 1000 => 2,
+                    < 1100 => 3,
+                    < 1200 => 4,
+                    < 1250 => 5,
+                    _ => 6,
+                };
+                string rs = $"rating_{rt}.png";
+                if (rt < 0)
+                    rs = "rating_off.png";
+
+                Image im = Image.FromFile(Core.AimuBot.Config.ResourcePath.CombinePath($"Arcaea/assets/img/{rs}"));
+                int xc = 300 / 2 - 240 / 2;
+                g.DrawImage(im, Rectangle.FromLTRB(xc, xc, xc + 240, xc + 240), Rectangle.FromLTRB(0, 0, im.Width, im.Height), GraphicsUnit.Pixel);
+
+                Font fts = new Font(f, 46f, FontStyle.Bold);
+                sf.Alignment = StringAlignment.Center;
+                string? _s = $"{((double)r.AccountInfo.Rating) / 100:F2}";
+                sb.Color = Color.FromArgb(200, 0, 0, 0);
+                int _w = 3;
+                g.DrawString(_s, fts, sb, Rectangle.FromLTRB(_w, xc + 70, 300, xc + 70 + 100), sf);
+                g.DrawString(_s, fts, sb, Rectangle.FromLTRB(-_w, xc + 70, 300, xc + 70 + 100), sf);
+                g.DrawString(_s, fts, sb, Rectangle.FromLTRB(0, xc + 70 - _w, 300, xc + 70 + 100), sf);
+                g.DrawString(_s, fts, sb, Rectangle.FromLTRB(0, xc + 70 + _w, 300, xc + 70 + 100), sf);
+                sb.Color = Color.White;
+                g.DrawString(_s, fts, sb, Rectangle.FromLTRB(0, xc + 70, 300, xc + 70 + 100), sf);
+
+                sb.Color = Color.White;
+                g.DrawString($"{r.Best30Avg:F3} / {r.Recent10Avg:F3}", ft, sb, Rectangle.FromLTRB(0, x + 220 + 5, 300, 330), sf);
+            }
+            else if (id >= 0)
+            {
+                var song_raw = _songInfoRaw.Songs.SongList.Find(s => s.Id == pr.SongId);
+
+                int little_p = pr.PerfectCount - pr.ShinyPerfectCount;
+
+                if (song_raw != null)
+                {
+                    string? s = BotUtil.CombinePath(song_raw.GetCover(pr.Difficulty));
+                    Image im = Image.FromFile(s);
+                    Image song_cover = new Bitmap(300, 300);
+                    using (Graphics g2 = Graphics.FromImage(song_cover))
+                    {
+                        g.SmoothingMode = SmoothingMode.HighQuality;
+                        g2.DrawImage(im, Rectangle.FromLTRB(x, x, x + 220, x + 220), Rectangle.FromLTRB(0, 0, im.Width, im.Height), GraphicsUnit.Pixel);
+
+                        LinearGradientBrush lgb = new LinearGradientBrush(
+                            new Point(0, x + 220 - 60 - 1),
+                            new Point(0, x + 220),
+                            Color.FromArgb(0, 0, 0, 0),
+                            Color.FromArgb(200, 0, 0, 0));
+
+                        g2.FillRectangle(lgb, Rectangle.FromLTRB(0, x + 220 - 60, 300, 300));
+                    }
+                    TextureBrush tb = new TextureBrush(song_cover);
+                    g.FillPath(tb, gp);
+                }
+                else
+                {
+                    sb.Color = Color.FromArgb(64, 255, 255, 255);
+                    g.FillPath(sb, gp);
+
+                    sb.Color = Color.White;
+                    g.DrawString(pr.SongId, ft, sb, Rectangle.FromLTRB(x, x, x + 220, x + 220), sf);
+                }
+
+                string? score_string = pr.Score.ToString("D8").Insert(5, "\'").Insert(2, "\'");
+                if (pr.Score > 10000000 && little_p == 0)
+                {
+                    sb.Color = Color.FromArgb(200, 0, 255, 186);
+                    g.DrawString(score_string, ft, sb, Rectangle.FromLTRB(2, x + 220 + 5 + 2, 300, 330), sf);
+                }
+                sb.Color = Color.White;
+                g.DrawString(score_string, ft, sb, Rectangle.FromLTRB(0, x + 220 + 5, 300, 330), sf);
+
+                var gp2 = GetRoundedRect(Rectangle.FromLTRB(x + 220 + 20 - 100, x - 26, x + 220 + 20, x + 26), 26);
+                sb.Color = (pr.Difficulty) switch
+                {
+                    0 => Color.Blue,
+                    1 => Color.ForestGreen,
+                    2 => Color.FromArgb(196, 22, 174),
+                    3 => Color.Red,
+                    _ => Color.Gray
+                };
+                g.FillPath(sb, gp2);
+
+                Font fts = new Font(f, 24f, FontStyle.Regular);
+                sb.Color = Color.White;
+                g.DrawString($"{pr.Rating:F2}", fts, sb, Rectangle.FromLTRB(x + 220 + 20 - 100, x - 26 + 6, x + 220 + 20, x + 26), sf);
+
+                Font ftc = new Font(f, 12f, FontStyle.Bold);
+                sb.Color = Color.White;
+                sf.Alignment = StringAlignment.Center;
+                //g.DrawString($"{song.Ratings[pr.Difficulty]:F1}", ft, sb, Rectangle.FromLTRB(x, x+220-50 , x+220, x+220-20), sf);
+
+                string? _srt = "";
+                if (pr.Score > 10000000 && little_p == 0)
+                {
+                    _srt = "";
+                }
+                else if (pr.Score > 10000000)
+                {
+                    _srt = $"P{pr.PerfectCount} -{little_p}";
+                }
+                else
+                {
+
+                    float rating_f = GetRating(pr.SongId, pr.Difficulty);
+                    if (rating_f > 0)
+                    {
+                        _srt = $"{rating_f:F1}  " +
+                            $"P{pr.PerfectCount} -{little_p}  " +
+                            $"F{pr.NearCount} L{pr.MissCount}";
+                    }
+                    else
+                    {
+                        _srt =
+                            $"P{pr.PerfectCount} -{little_p}  " +
+                            $"F{pr.NearCount} L{pr.MissCount}";
+                    }
+                }
+                g.DrawString(_srt, ftc, sb, Rectangle.FromLTRB(x, x + 220 - 25, x + 220, x + 220), sf);
+            }
+        }
+
+        return img;
+    }
+
+    public GraphicsPath GetRoundedRect(Rectangle rect, int radius)
+    {
+        radius *= 2;
+
+        GraphicsPath gp = new();
+        gp.AddLine(rect.X + radius, rect.Y, rect.Right - radius, rect.Y);
+        gp.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+
+        gp.AddLine(rect.Right, rect.Y + radius, rect.Right, rect.Y - radius);
+        gp.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+
+        gp.AddLine(rect.X + radius, rect.Bottom, rect.Right - radius, rect.Bottom);
+        gp.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+
+        gp.AddLine(rect.X, rect.Y + radius, rect.X, rect.Bottom - radius);
+        gp.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+        return gp;
+    }
+}

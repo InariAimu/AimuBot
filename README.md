@@ -16,7 +16,7 @@ Doc: 简体中文 / English
 |:----|:--------|:--------|:---------|
 | QQ  | Mirai   | 🟢     | Mirai-CS Code on socket   |
 | QQ  | Konata  | Working     | KQ Code on socket   |
-| QQ Channel | ChannelProtocol | Working | CS Code on socket |
+| QQ Channel | QQChannel | Working | CS Code on socket |
 
 ## Features
 

@@ -15,7 +15,7 @@ Doc: 简体中文 / English
 | IM  | Adapter | Support | Protocol |
 |:----|:--------|:--------|:---------|
 | QQ  | Mirai   | 🟢     | Mirai-CS Code on socket   |
-| QQ  | Konata  | Working     | Mirai-CS Code on socket   |
+| QQ  | Konata  | Working     | KQ Code on socket   |
 | QQ Channel | ChannelProtocol | Working | CS Code on socket |
 
 ## Features

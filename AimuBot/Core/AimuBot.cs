@@ -16,9 +16,7 @@ public class AimuBot
 
     private readonly EventDispatcher _dispatcher = new();
 
-    private readonly ModuleMgr.ModuleMgr _moduleMgr = new();
-
-    public ModuleMgr.ModuleMgr ModuleMgr => _moduleMgr;
+    public ModuleMgr.ModuleMgr ModuleMgr { get; } = new();
 
     public static Random Random { get; } = new Random();
 
@@ -31,14 +29,14 @@ public class AimuBot
         _dispatcher.OnLog += Dispatcher_OnLog;
         _dispatcher.OnMessage += Dispatcher_OnMessage;
 
-        _moduleMgr.Bot = this;
-        _moduleMgr.Init();
+        ModuleMgr.Bot = this;
+        ModuleMgr.Init();
 
-        Mirai? mirai_bot = new Adapters.Mirai();
-        mirai_bot.OnMessageReceived += Bot_OnMessageReceived;
-        _bots.Add(mirai_bot);
+        Mirai? miraiBot = new Adapters.Mirai();
+        miraiBot.OnMessageReceived += Bot_OnMessageReceived;
+        _bots.Add(miraiBot);
 
-        mirai_bot.WaitForConnection();
+        miraiBot.WaitForConnection();
 
         await Task.Delay(-1);
     }
@@ -49,7 +47,7 @@ public class AimuBot
         _dispatcher.RaiseEvent(sender, args);
     }
 
-    private void Dispatcher_OnMessage(BotAdapter sender, MessageEvent args) => _moduleMgr.DispatchGroupMessage(args.Message);
+    private void Dispatcher_OnMessage(BotAdapter sender, MessageEvent args) => ModuleMgr.DispatchGroupMessage(args.Message);
 
     private void Dispatcher_OnLog(BotAdapter sender, LogEvent args) => BotLogger.LogV(args.Tag, args.EventMessage);
 

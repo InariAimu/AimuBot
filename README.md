@@ -1,12 +1,16 @@
+<div align="center">
+
+<img width="100" src="Resources/AimuBot.jpg">
+
 # AimuBot
 
 [![Version](https://img.shields.io/badge/Public-1.0.0-blue)](#)
 [![C#](https://img.shields.io/badge/.NET-6.0-blue)](#)
 [![License](https://img.shields.io/static/v1?label=LICENSE&message=GNU%20GPLv3&color=lightrey)](./LICENSE)
 
----
-
 A bot server for several IM platforms. Single bot, mutiple IMs.
+
+</div>
 
 Doc: 简体中文 / English
 

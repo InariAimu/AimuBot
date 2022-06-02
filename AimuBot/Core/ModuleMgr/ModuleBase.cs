@@ -10,7 +10,7 @@ namespace AimuBot.Core.ModuleMgr;
 
 public class ModuleBase
 {
-    internal AimuBot? Bot { get; set; } = null;
+    internal AimuBot? Bot { get; set; }
 
     private List<CommandBase> _commands = new();
 
@@ -27,11 +27,7 @@ public class ModuleBase
     public string OnGetVersion()
     {
         var attr = GetType().GetCustomAttribute<ModuleAttribute>();
-        if (attr is not null)
-        {
-            return attr.Version;
-        }
-        return "1.0.0";
+        return attr is not null ? attr.Version : "1.0.0";
     }
 
     public virtual bool OnInit() => OnReload();
@@ -60,48 +56,44 @@ public class ModuleBase
             if (method.ReturnType == typeof(void))
                 continue;
 
-            object[]? cmdInfo = method.GetCustomAttributes(typeof(CommandAttribute), false);
-            if (cmdInfo != null)
+            var cmdInfo = method.GetCustomAttributes(typeof(CommandAttribute), false);
+            
+            foreach (var param in cmdInfo)
             {
-                foreach (object? param in cmdInfo)
+                if (param.GetType() != typeof(CommandAttribute)) continue;
+                
+                if (param is not CommandAttribute cmd) continue;
+                
+                if (cmd.State == State.Normal)
                 {
-                    if (param.GetType() == typeof(CommandAttribute))
+                    if (method.ReturnType == typeof(MessageChain) || method.ReturnType == typeof(Task<MessageChain>))
                     {
-                        if (param is CommandAttribute cmd)
+                        CommandBase cmdFuncBase = new()
                         {
-                            if (cmd.State == State.Normal)
-                            {
-                                if (method.ReturnType == typeof(MessageChain) || method.ReturnType == typeof(Task<MessageChain>))
-                                {
-                                    CommandBase cmdFuncBase = new()
-                                    {
-                                        CommandInfo = cmd,
-                                        InnerMethod = method
-                                    };
-                                    _commands.Add(cmdFuncBase);
-                                    BotLogger.LogV(nameof(LoadCmd), $"{t}.{method.Name} => {cmd.Name} {cmd.ShowTip} ");
-                                }
-                                else
-                                {
-                                    BotLogger.LogE(nameof(LoadCmd), $"{t}.{method.Name} => [Func mismatch] {cmd.Name} {cmd.ShowTip} ");
-                                }
-                            }
-                            else
-                            {
-                                BotLogger.LogW(nameof(LoadCmd), $"{t}.{method.Name} => [{cmd.State}] {cmd.Name} {cmd.ShowTip} ");
-                            }
-                        }
+                            CommandInfo = cmd,
+                            InnerMethod = method
+                        };
+                        _commands.Add(cmdFuncBase);
+                        BotLogger.LogV(nameof(LoadCmd), $"{t}.{method.Name} => {cmd.Name} {cmd.ShowTip} ");
                     }
+                    else
+                    {
+                        BotLogger.LogE(nameof(LoadCmd), $"{t}.{method.Name} => [Func mismatch] {cmd.Name} {cmd.ShowTip} ");
+                    }
+                }
+                else
+                {
+                    BotLogger.LogW(nameof(LoadCmd), $"{t}.{method.Name} => [{cmd.State}] {cmd.Name} {cmd.ShowTip} ");
                 }
             }
         }
 
         _commands = _commands
             .OrderByDescending(x => x.CommandInfo.Command.Length)
-            .OrderBy(x => x.CommandInfo.Matching)
+            .ThenBy(x => x.CommandInfo.Matching)
             .ToList();
 
-        for (int i = 0; i < _commands.Count; i++)
+        for (var i = 0; i < _commands.Count; i++)
         {
             var c = _commands[i];
             BotLogger.LogI(nameof(LoadCmd), $"{t} {i:D2} {c.CommandInfo.Matching} {c.CommandInfo.ShowTip}");
@@ -115,56 +107,59 @@ public class ModuleBase
         foreach (var cmd in _commands)
         {
             var (succ, body) = CheckKeyword(cmd.CommandInfo.Command, msg, cmd.CommandInfo.Matching);
-            if (succ)
+            if (!succ) continue;
+            
+            var userLevel = AimuBot.Config.RBAC.GetGroupMessageLevel(msg);
+            if (userLevel <= cmd.CommandInfo.Level)
             {
-                var userLevel = AimuBot.Config.RBAC.GetGroupMessageLevel(msg);
-                if (userLevel <= cmd.CommandInfo.Level)
+                Task.Run(() =>
                 {
-                    Task.Run(() =>
+                    try
                     {
-                        try
+                        msg.Content = body;
+                        var result = cmd.InnerMethod?.Invoke(this, new object?[] { msg });
+                        var msgChain = result as MessageChain ?? (result as Task<MessageChain>)?.Result;
+                        var ret = msgChain?.ToCsCode();
+                        BotLogger.LogI(OnGetName(), ret);
+                        if (ret == "") return;
+                        switch (cmd.CommandInfo.SendType)
                         {
-                            msg.Content = body;
-                            object? result = cmd.InnerMethod.Invoke(this, new[] { msg });
-                            var msgChain = result as MessageChain ?? (result as Task<MessageChain>)?.Result;
-                            string? ret = "";
-                            ret = msgChain?.ToCsCode();
-                            BotLogger.LogI(OnGetName(), ret);
-                            if (ret != "")
-                            {
-                                if (cmd.CommandInfo.SendType == SendType.Send)
-                                    msg.Bot.SendGroupMessageSimple(msg.SubjectId, ret);
-                                else if (cmd.CommandInfo.SendType == SendType.Reply)
-                                    msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
+                            case SendType.Send:
+                                msg.Bot.SendGroupMessageSimple(msg.SubjectId, ret);
+                                break;
+                            case SendType.Reply:
+                                msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
 
-                                Information.MessageSent++;
-                            }
-                        }
-                        catch (TargetInvocationException ex)
-                        {
-                            BotLogger.LogE(OnGetName(), nameof(TargetInvocationException));
-                            BotLogger.LogE(OnGetName(), $"[{cmd.InnerMethod.Name}] {ex.InnerException.Message}\n{ex.InnerException.StackTrace}");
-                        }
-                        catch (AggregateException ex)
-                        {
-                            BotLogger.LogE(OnGetName(), nameof(AggregateException));
-                            BotLogger.LogE(OnGetName(), $"[{cmd.InnerMethod.Name}] {ex.InnerException.Message}\n{ex.InnerException.StackTrace}");
-                        }
-                        catch (Exception ex)
-                        {
-                            BotLogger.LogE(OnGetName(), $"[{cmd.InnerMethod.Name}] {ex.Message}\n{ex.StackTrace}");
-                        }
-                    });
-                    return true;
-                }
-                else
-                {
-                    LogMessage($"[{msg.SubjectName}][{msg.SenderName}] 权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
-                    if (userLevel != RBACLevel.RestrictedUser)
-                        msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, $"权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
+                        Information.MessageSent++;
+                    }
+                    catch (TargetInvocationException ex)
+                    {
+                        BotLogger.LogE(OnGetName(), nameof(TargetInvocationException));
+                        BotLogger.LogE(OnGetName(), $"[{cmd.InnerMethod?.Name}] {ex.InnerException?.Message}\n{ex.InnerException?.StackTrace}");
+                    }
+                    catch (AggregateException ex)
+                    {
+                        BotLogger.LogE(OnGetName(), nameof(AggregateException));
+                        BotLogger.LogE(OnGetName(), $"[{cmd.InnerMethod?.Name}] {ex.InnerException?.Message}\n{ex.InnerException?.StackTrace}");
+                    }
+                    catch (Exception ex)
+                    {
+                        BotLogger.LogE(OnGetName(), $"[{cmd.InnerMethod?.Name}] {ex.Message}\n{ex.StackTrace}");
+                    }
+                });
+                return true;
+            }
+            else
+            {
+                LogMessage($"[{msg.SubjectName}][{msg.SenderName}] 权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
+                if (userLevel != RBACLevel.RestrictedUser)
+                    msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, $"权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
 
-                    return false;
-                }
+                return false;
             }
         }
 
@@ -175,36 +170,34 @@ public class ModuleBase
 
     public (bool, string) CheckKeyword(string keyword, BotMessage desc, Matching resolveType)
     {
-        string? s = desc.Body.Trim();
-        if (resolveType == Matching.Full)
+        var s = desc.Body.Trim();
+        switch (resolveType)
         {
-            string? wd = $"/{keyword}";
-            if (s.ToLower() == wd)
-                return (true, "");
-        }
-        else if (resolveType == Matching.StartsWith)
-        {
-            if (keyword == "/")
+            case Matching.Full:
+            {
+                string? wd = $"/{keyword}";
+                if (s.ToLower() == wd)
+                    return (true, "");
+                break;
+            }
+            case Matching.StartsWith when keyword == "/":
             {
                 string? wd = "/";
                 if (s.StartsWith(wd, true))
                     return (true, s.Drop(wd.Length).Trim());
+                break;
             }
-            else
+            case Matching.StartsWith:
             {
                 string? wd = $"/{keyword}";
                 if (s.StartsWith(wd, true))
                     return (true, s.Drop(wd.Length).Trim());
-
+                break;
             }
-        }
-        else
-        if (resolveType == Matching.AnyWithLeadChar)
-        {
-            if (s.Length >= 1 && s[0] == '/')
-            {
+            case Matching.StartsWithNoLeadChar when s.StartsWith(keyword, true):
+                return (true, s.Drop(keyword.Length).Trim());
+            case Matching.AnyWithLeadChar when s.Length >= 1 && s[0] == '/':
                 return (true, s[1..]);
-            }
         }
         return (false, "");
     }

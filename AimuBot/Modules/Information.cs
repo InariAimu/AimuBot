@@ -32,35 +32,31 @@ internal class Information : ModuleBase
         sb.Append(Core.AimuBot.Config.BotName + "_CS [Server]");
         sb.Append(" ver." + Assembly.GetExecutingAssembly().GetName().Version?.ToString(3));
         sb.AppendLine();
-        sb.Append(".Net " + Environment.Version.ToString());
+        sb.Append(".Net " + Environment.Version);
         sb.Append(" " + (Environment.Is64BitProcess ? "x64" : "x86"));
         sb.AppendLine();
         sb.AppendLine();
 
-        long up_time = (Environment.TickCount64 - _startTime) / 1000;
-        TimeSpan ts = TimeSpan.FromSeconds(up_time);
-        sb.Append("运行时间：" + ts.ToString());
+        var upTime = (Environment.TickCount64 - _startTime) / 1000;
+        var ts = TimeSpan.FromSeconds(upTime);
+        sb.Append("运行时间：" + ts);
         sb.AppendLine();
 
         sb.Append($"消息处理：{MessageSent}/{MessageProcessed}/{MessageReceived}");
         sb.AppendLine();
 
-        Process proc = Process.GetCurrentProcess();
-        long mem_mb = proc.PrivateMemorySize64 / 1048576;
-        long ws_mb = Environment.WorkingSet / 1048576;
-        long pmem_mb = GetPhysicalMemory() / 1048576;
-        double percent = (double)ws_mb * 100 / pmem_mb;
-        sb.Append($"内存使用：{mem_mb}/{ws_mb}/{pmem_mb}M ({percent:F2}%)");
+        var currentProcess = Process.GetCurrentProcess();
+        var memory = currentProcess.PrivateMemorySize64 / 1048576;
+        var workingSet = Environment.WorkingSet / 1048576;
+        var physicalMemory = GetPhysicalMemory() / 1048576;
+        var percent = (double)workingSet * 100 / physicalMemory;
+        sb.Append($"内存使用：{memory}/{workingSet}/{physicalMemory}M ({percent:F2}%)");
         sb.AppendLine();
-        //sb.AppendLine();
-
-        //sb.Append("");
-        //sb.AppendLine();
 
         return sb.ToString().Trim();
     }
 
-    public long GetPhysicalMemory()
+    private long GetPhysicalMemory()
     {
         ManagementObjectSearcher searcher = new();
         searcher.Query = new SelectQuery("Win32_PhysicalMemory", "", new string[] { "Capacity" });
@@ -71,18 +67,17 @@ internal class Information : ModuleBase
         while (em.MoveNext())
         {
             var baseObj = em.Current;
-            if (baseObj.Properties["Capacity"].Value != null)
+            if (baseObj.Properties["Capacity"].Value == null) continue;
+            try
             {
-                try
-                {
-                    capacity += long.Parse(baseObj.Properties["Capacity"].Value.ToString());
-                }
-                catch
-                {
-                    return 0;
-                }
+                capacity += long.Parse(baseObj.Properties["Capacity"].Value.ToString() ?? "0");
+            }
+            catch
+            {
+                return 0;
             }
         }
+
         return capacity;
     }
 }

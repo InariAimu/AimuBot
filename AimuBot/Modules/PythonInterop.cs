@@ -31,10 +31,11 @@ internal class PythonInterop : ModuleBase
         SendType = SendType.Reply)]
     public MessageChain OnAsm(BotMessage msg)
     {
-        Dictionary<string, string> param = new();
-        param["-a"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(msg.Content));
-        string? r = RunPythonFile(_pyAsmFile, param);
-        return r;
+        Dictionary<string, string> param = new()
+        {
+            ["-a"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(msg.Content))
+        };
+        return RunPythonFile(_pyAsmFile, param);
     }
 
     [Command("py-dasm",
@@ -49,17 +50,18 @@ internal class PythonInterop : ModuleBase
     {
         var content = msg.Content;
         string s = content.SubstringBefore("\n");
-        string order_mode = s.SubstringBefore(" ");
-        string addr = s.SubstringAfter(" ");
+        string orderMode = s.SubstringBefore(" ");
+        string address = s.SubstringAfter(" ");
 
-        Dictionary<string, string> param = new();
-        param["-b"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(content.SubstringAfter("\n")));
-        param["-a"] = addr;
-        param["-o"] = order_mode.Contains('<') ? "<" : ">";
-        param["-m"] = order_mode.Contains('T') ? "T" : "A";
-        string? r = RunPythonFile(_pyDasmFile, param);
+        Dictionary<string, string> param = new()
+        {
+            ["-b"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(content.SubstringAfter("\n"))),
+            ["-a"] = address,
+            ["-o"] = orderMode.Contains('<') ? "<" : ">",
+            ["-m"] = orderMode.Contains('T') ? "T" : "A"
+        };
 
-        return r;
+        return RunPythonFile(_pyDasmFile, param);
     }
 
     public string RunPythonFile(string pyFile, Dictionary<string, string> param)
@@ -74,14 +76,16 @@ internal class PythonInterop : ModuleBase
             sArguments += $"{k} \"{v}\" ";
         }
 
-        ProcessStartInfo start = new();
-        start.FileName = _python3;
-        start.Arguments = sArguments;
-        start.UseShellExecute = false;
-        start.RedirectStandardOutput = true;
-        start.RedirectStandardInput = true;
-        start.RedirectStandardError = true;
-        start.CreateNoWindow = true;
+        ProcessStartInfo start = new()
+        {
+            FileName = _python3,
+            Arguments = sArguments,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardInput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
 
         Process process = new();
         process.StartInfo = start;
@@ -97,6 +101,6 @@ internal class PythonInterop : ModuleBase
                 err.Append(process.StandardError.ReadToEnd());
         }
 
-        return sb.ToString() + err.ToString();
+        return sb + err.ToString();
     }
 }

@@ -3,6 +3,7 @@ using AimuBot.Core.Bot;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
+using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
 
 namespace AimuBot.Modules.Arcaea;

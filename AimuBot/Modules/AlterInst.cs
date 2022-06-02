@@ -42,15 +42,13 @@ internal class AlterInst : ModuleBase
 
     private bool OnCmdAlias(BotMessage msg, string content)
     {
-        string[] s = content.Split(" > ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (s.Length >= 2)
-        {
-            if (s[0] == s[1])
-                return true;
+        var s = content.Split(" > ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (s.Length < 2) return true;
+        if (s[0] == s[1])
+            return true;
 
-            LogMessage($"cmd-alias {s[0]} > {s[1]}");
-            CmdAlias[s[0]] = s[1];
-        }
+        LogMessage($"cmd-alias {s[0]} > {s[1]}");
+        CmdAlias[s[0]] = s[1];
         return true;
     }
 

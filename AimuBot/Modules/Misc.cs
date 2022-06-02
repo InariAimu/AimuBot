@@ -1,4 +1,7 @@
 ﻿using System.Drawing;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 
 using AimuBot.Core.Bot;
 using AimuBot.Core.Extensions;
@@ -28,20 +31,21 @@ internal class Misc : ModuleBase
         SendType = SendType.Send)]
     public MessageChain OnMMMM(BotMessage msg)
     {
-        HanyuPinyinOutputFormat format = new();
-        format.ToneType = HanyuPinyinToneType.WITH_TONE_NUMBER;
-        format.VCharType = HanyuPinyinVCharType.WITH_V;
-        format.CaseType = HanyuPinyinCaseType.LOWERCASE;
-
-        string[] cats = new string[] { "喵", "喵", "苗", "秒", "妙", "喵~" };
-
-        string rev = "";
-
-        foreach (char c in msg.Content)
+        HanyuPinyinOutputFormat format = new()
+        {
+            ToneType = HanyuPinyinToneType.WITH_TONE_NUMBER,
+            VCharType = HanyuPinyinVCharType.WITH_V,
+            CaseType = HanyuPinyinCaseType.LOWERCASE
+        };
+        
+        var cats = new[]{ "喵", "喵", "苗", "秒", "妙", "喵~" };
+        var rev = "";
+        
+        foreach (var c in msg.Content)
         {
             try
             {
-                string? id = PinyinHelper.ToHanyuPinyinStringArray(c, format)[0];
+                var id = PinyinHelper.ToHanyuPinyinStringArray(c, format)[0];
                 rev += cats[Convert.ToInt32(id[^1..])];
             }
             catch
@@ -53,7 +57,7 @@ internal class Misc : ModuleBase
         return rev;
     }
 
-    long guy_lock = long.MaxValue;
+    private long _guyLock = long.MaxValue;
 
     [Command("guy",
         Name = "生成Guy发言",
@@ -67,12 +71,12 @@ internal class Misc : ModuleBase
         SendType = SendType.Send)]
     public MessageChain OnGuy(BotMessage msg)
     {
-        string? content = msg.Content;
+        var content = msg.Content;
 
-        if (BotUtil.Timestamp < guy_lock + 15 * 1000)
+        if (BotUtil.Timestamp < _guyLock + 15 * 1000)
             return "";
 
-        guy_lock = BotUtil.Timestamp;
+        _guyLock = BotUtil.Timestamp;
 
         LunaUI.LunaUI ui = new(BotUtil.ResourcePath, "Generate/Guy.json");
         ui.GetNodeByPath<LuiText>("Text").Text = DateTime.Now.ToString("yyyy/MM/dd");
@@ -84,7 +88,7 @@ internal class Misc : ModuleBase
         }.Random();*/
 
         Image im = new Bitmap(ui.Root.Option.CanvasSize.Width, ui.Root.Option.CanvasSize.Height);
-        using (Graphics g = Graphics.FromImage(im))
+        using (var g = Graphics.FromImage(im))
         {
             Font f = new("微软雅黑", 40, FontStyle.Regular, GraphicsUnit.Pixel);
             var sf = g.MeasureString(content, f);
@@ -95,12 +99,9 @@ internal class Misc : ModuleBase
             ui.GetNodeByPath<LuiText>("Text1").Size = new((int)sf.Width + 50, 55);
         }
 
-        var origin = ui.Render();
+        ui.Render().SaveToJpg(BotUtil.CombinePath("Generate/Guy_gen.jpg"), 85);
 
-        string? path = "Generate/Guy_gen.jpg";
-        origin.SaveToJpg(BotUtil.CombinePath(path), 85);
-
-        return new MessageBuilder(ImageChain.Create(path)).Build();
+        return new MessageBuilder(ImageChain.Create("Generate/Guy_gen.jpg")).Build();
     }
 
     [Command("roll",
@@ -115,17 +116,52 @@ internal class Misc : ModuleBase
         SendType = SendType.Send)]
     public MessageChain OnRoll(BotMessage msg)
     {
-        List<string> options = msg.Content.Split(',', '，', ' ').ToList();
-        string? s = options.Random();
+        var s = msg.Content.Split(',', '，', ' ').ToList().Random();
         if (s.IsNullOrEmpty())
             return "";
 
-        List<string> tip = new List<string>() { "那我建议你选择", "", "那就", "吧", "不如选", "", "为什么不", "呢" };
+        var tip = new[] { "那我建议你选择", "", "那就", "吧", "不如选", "", "为什么不", "呢" };
 
-        int op = new Random().Next(0, tip.Count / 2);
-        op *= 2;
+        var op = new Random().Next(0, tip.Length / 2) * 2;
 
         return tip[op] + s + tip[op + 1];
+    }
+
+    [Command("https://github.com/",
+        Name = "Github repo parser",
+        Description = "Github repo parser",
+        Tip = "",
+        Example = "",
+        Category = "杂项",
+        Matching = Matching.StartsWithNoLeadChar,
+        Level = RBACLevel.Normal,
+        SendType = SendType.Send)]
+    public async Task<MessageChain> OnCommandGithubParser(BotMessage msg)
+    {
+        // UrlDownload the page
+        try
+        {
+            LogMessage(msg.Body);
+
+            var bytes = await $"{msg.Body.TrimEnd('/')}.git".UrlDownload();
+
+            var html = Encoding.UTF8.GetString(bytes);
+
+            // Get meta data
+            var metaData = html.GetMetaData("property");
+            var imageMeta = metaData["og:image"];
+
+            // Build message
+            var image = await imageMeta.UrlDownload();
+            await File.WriteAllBytesAsync(BotUtil.CombinePath("misc/gh.png"), image);
+            return new MessageBuilder(ImageChain.Create("misc/gh.png")).Build();
+        }
+        catch (Exception e)
+        {
+            LogMessage("Not a repository link. \n" +
+                              $"{e.Message}");
+            return "";
+        }
     }
 
 }

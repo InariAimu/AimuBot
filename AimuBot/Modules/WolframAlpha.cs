@@ -32,17 +32,17 @@ internal class WolframAlpha : ModuleBase
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnWolframAlphaQuery(BotMessage msg)
     {
-        string token = _apiKey;
-        string? param = $"input={WebUtility.UrlEncode(msg.Content)}&appid={token}";
+        var token = _apiKey;
+        var param = $"input={WebUtility.UrlEncode(msg.Content)}&appid={token}";
 
         LogMessage(param);
 
-        string? s = await GetString("http://api.wolframalpha.com/v2/query?" + param);
+        var s = await GetString("http://api.wolframalpha.com/v2/query?" + param);
 
         XmlDocument xml = new();
         xml.LoadXml(s);
-        bool success = xml.SelectSingleNode("/queryresult").Attributes["success"].Value == "true";
-        bool error = xml.SelectSingleNode("/queryresult").Attributes["error"].Value == "true";
+        var success = xml.SelectSingleNode("/queryresult").Attributes["success"].Value == "true";
+        var error = xml.SelectSingleNode("/queryresult").Attributes["error"].Value == "true";
 
         if (!success || error)
         {
@@ -50,15 +50,16 @@ internal class WolframAlpha : ModuleBase
         }
 
         var imgNodes = xml.SelectNodes("/queryresult/pod");
-        int podCount = 0;
+        var podCount = 0;
         List<string> titles = new();
         List<Task> downloadImgTasks = new();
+        
         foreach (XmlNode node in imgNodes)
         {
-            string? title = node.Attributes["title"].Value;
-            string img_url = node.InnerXml.GetSandwichedText("img src=\"", "\"").Replace("amp;", "");
+            var title = node.Attributes["title"].Value;
+            var imgUrl = node.InnerXml.GetSandwichedText("img src=\"", "\"").Replace("amp;", "");
 
-            downloadImgTasks.Add(DownloadFileFrom(img_url, $@"WolframAlpha\{podCount}.gif"));
+            downloadImgTasks.Add(DownloadFileFrom(imgUrl, $"WolframAlpha/{podCount}.gif"));
 
             titles.Add(title);
             LogMessage(title + "," + podCount);
@@ -79,11 +80,11 @@ internal class WolframAlpha : ModuleBase
         }
 
         List<Image> images = new();
-        int width = 0;
-        int height = 0;
-        for (int t = 0; t < podCount; t++)
+        var width = 0;
+        var height = 0;
+        for (var t = 0; t < podCount; t++)
         {
-            Image? im = Image.FromFile(BotUtil.CombinePath($@"WolframAlpha\{t}.gif"));
+            var im = Image.FromFile(BotUtil.CombinePath($@"WolframAlpha\{t}.gif"));
             images.Add(im);
             width = Math.Max(width, im.Width);
             height += im.Height + 35;
@@ -93,15 +94,15 @@ internal class WolframAlpha : ModuleBase
 
         LogMessage($"Total img size: {width},{height}");
 
-        int dh = 5;
+        var dh = 5;
         Image image = new Bitmap(width + 20, height + 40);
 
-        using (Graphics g = Graphics.FromImage(image))
+        using (var g = Graphics.FromImage(image))
         {
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
             g.Clear(Color.White);
-            for (int t = 0; t < podCount; t++)
+            for (var t = 0; t < podCount; t++)
             {
                 g.FillRectangle(shadeBrush, -1, dh, width + 20 + 2, 25);
                 g.DrawString(titles[t], font, textBrush, new PointF(5, dh));
@@ -110,43 +111,43 @@ internal class WolframAlpha : ModuleBase
                 dh += images[t].Height + 5;
             }
 
-            string? btStr = "Wolfram Alpha Non-commercial API / AimuBot";
+            const string rightFooter = "Wolfram Alpha Non-commercial API / AimuBot";
             g.FillRectangle(shadeBrush, 0, height + 40 - 20, width + 20, 20);
-            var sz = g.MeasureString(btStr, font);
+            var sz = g.MeasureString(rightFooter, font);
 
             textBrush.Color = Color.DarkRed;
-            g.DrawString(btStr, font, textBrush,
+            g.DrawString(rightFooter, font, textBrush,
                 width + 30 - sz.Width - 10, height + 40 - 20, new StringFormat(StringFormatFlags.NoWrap));
 
-            BotUtil.SaveImageToJpg(image, @"WolframAlpha\result.jpg", 95);
+            BotUtil.SaveImageToJpg(image, "WolframAlpha/result.jpg", 95);
         }
 
         image.Dispose();
         images.ForEach(i => i.Dispose());
         images.Clear();
 
-        return new MessageBuilder(ImageChain.Create("WolframAlpha/result.jpg", ImageChainType.LocalFile)).Build();
+        return new MessageBuilder(ImageChain.Create("WolframAlpha/result.jpg")).Build();
     }
 
-    public async Task<string> GetString(string url)
+    private async Task<string> GetString(string url)
     {
-        string? html = "";
-        ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback((obj, cert, chain, errs) => true);
+        var html = "";
+        ServicePointManager.ServerCertificateValidationCallback = (obj, cert, chain, errs) => true;
         using HttpClient hc = new();
         html = await hc.GetStringAsync(url);
         return html;
     }
 
-    public async Task<byte[]> GetByteArray(string url)
+    private async Task<byte[]> GetByteArray(string url)
     {
-        ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback((obj, cert, chain, errs) => true);
+        ServicePointManager.ServerCertificateValidationCallback = (obj, cert, chain, errs) => true;
         using HttpClient hc = new();
         return await hc.GetByteArrayAsync(url);
     }
 
-    public async Task DownloadFileFrom(string url, string relativePath)
+    private async Task DownloadFileFrom(string url, string relativePath)
     {
-        byte[]? buff = await GetByteArray(url);
+        var buff = await GetByteArray(url);
         await File.WriteAllBytesAsync(BotUtil.CombinePath(relativePath), buff);
     }
 }

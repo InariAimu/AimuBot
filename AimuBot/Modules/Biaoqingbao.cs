@@ -3,6 +3,7 @@ using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
+
 using Newtonsoft.Json;
 
 namespace AimuBot.Modules;
@@ -11,10 +12,10 @@ namespace AimuBot.Modules;
     Command = "")]
 internal class Biaoqingbao : ModuleBase
 {
-    private string _imgPath = BotUtil.CombinePath("表情包/");
-    private string _confFile = BotUtil.CombinePath("表情包/NameAlias.jsom");
+    private readonly string _confFile = BotUtil.CombinePath("表情包/NameAlias.jsom");
 
     private Dictionary<string, List<string>> _imageAlias = new();
+    private readonly string _imgPath = BotUtil.CombinePath("表情包/");
 
     public override bool OnReload()
     {
@@ -22,23 +23,17 @@ internal class Biaoqingbao : ModuleBase
         {
             _imageAlias = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(File.ReadAllText(_confFile));
             DirectoryInfo di = new(_imgPath);
-            foreach (DirectoryInfo d in di.GetDirectories())
-            {
+            foreach (var d in di.GetDirectories())
                 if (!_imageAlias.ContainsKey(d.Name))
-                {
-                    _imageAlias.Add(d.Name, new());
-                }
-            }
+                    _imageAlias.Add(d.Name, new List<string>());
         }
         else
         {
             DirectoryInfo di = new(_imgPath);
-            foreach (DirectoryInfo d in di.GetDirectories())
-            {
-                _imageAlias.Add(d.Name, new());
-            }
+            foreach (var d in di.GetDirectories()) _imageAlias.Add(d.Name, new List<string>());
             File.WriteAllText(_confFile, JsonConvert.SerializeObject(_imageAlias));
         }
+
         return true;
     }
 
@@ -55,13 +50,10 @@ internal class Biaoqingbao : ModuleBase
     {
         var content = msg.Content.Trim().ToLower().SubstringBeforeLast(" ");
         var numStr = content.SubstringAfterLast(" ");
-        int num = -1;
-        if (!numStr.IsNullOrEmpty())
-        {
-            num = Convert.ToInt32(num);
-        }
+        var num = -1;
+        if (!numStr.IsNullOrEmpty()) num = Convert.ToInt32(num);
 
-        string imgDir = "";
+        var imgDir = "";
         foreach (var (k, v) in _imageAlias)
         {
             if (k == content)
@@ -69,6 +61,7 @@ internal class Biaoqingbao : ModuleBase
                 imgDir = k;
                 break;
             }
+
             if (v.Any() && v.Contains(content))
             {
                 imgDir = k;
@@ -76,12 +69,7 @@ internal class Biaoqingbao : ModuleBase
             }
         }
 
-        if (!imgDir.IsNullOrEmpty())
-        {
-            return GetImage(imgDir, num);
-        }
-
-        return "";
+        return !imgDir.IsNullOrEmpty() ? GetImage(imgDir, num) : "";
     }
 
     private MessageChain GetImage(string directory, int id = -1)
@@ -98,6 +86,5 @@ internal class Biaoqingbao : ModuleBase
             var im = files.ToList().Random();
             return new MessageBuilder(ImageChain.Create(Path.Combine(_imgPath, directory, im.Name))).Build();
         }
-
     }
 }

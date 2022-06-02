@@ -1,6 +1,6 @@
 ﻿namespace AimuBot.Modules.Arcaea.AffTools.AffAnalyzer;
 
-struct NoteRaw
+internal struct NoteRaw
 {
     public int TimePoint = 0;
     public int Duration = 0;
@@ -12,7 +12,7 @@ struct NoteRaw
     }
 }
 
-class Note
+internal class Note
 {
     public int TimePoint { get; set; } = 0;
     public int Duration { get; set; } = 0;
@@ -22,7 +22,7 @@ class Note
     public bool hasDot = false;
     public bool isTriplet = false;
 
-    static bool isDoubleEqual(double a, double b, double e) => Math.Abs(a - b) <= e;
+    private static bool isDoubleEqual(double a, double b, double e) => Math.Abs(a - b) <= e;
 
     public Note(int timeing, int length, double bpm)
     {
@@ -31,15 +31,14 @@ class Note
 
     public Note()
     {
-
     }
 
     public bool Analyze(int timing, int length, double bpm)
     {
-        double threshold = 3.5;
+        var threshold = 3.5;
 
         TimePoint = timing;
-        double time_full_note = 60 * 1000 * 4 / bpm;
+        var time_full_note = 60 * 1000 * 4 / bpm;
         if (length > time_full_note)
         {
             beyondFull = true;
@@ -52,7 +51,7 @@ class Note
             return true;
         }
 
-        for (int i = 2; i <= 64;)
+        for (var i = 2; i <= 64;)
         {
             var t_len = time_full_note / i;
             var t_dot_len = t_len * 1.5;
@@ -62,6 +61,7 @@ class Note
                 Divide = i;
                 return true;
             }
+
             if (isDoubleEqual(length, t_dot_len, threshold))
             {
                 Divide = i;
@@ -71,13 +71,14 @@ class Note
 
             i += i switch
             {
-                < 4 => 1,
-                < 28 => 2,
-                < 32 => 4,
+                < 4   => 1,
+                < 28  => 2,
+                < 32  => 4,
                 <= 64 => 8,
-                _ => 1,
+                _     => 1
             };
         }
+
         return false;
     }
 }

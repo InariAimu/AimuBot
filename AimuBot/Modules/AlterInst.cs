@@ -10,12 +10,9 @@ namespace AimuBot.Modules;
     Description = "动态运行C#")]
 internal class AlterInst : ModuleBase
 {
-    public static Dictionary<string, string> CmdAlias { get; } = new Dictionary<string, string>();
+    public static Dictionary<string, string> CmdAlias { get; } = new();
 
-    public override bool OnInit()
-    {
-        return true;
-    }
+    public override bool OnInit() => true;
 
     public bool OnRunCode(BotMessage msg)
     {
@@ -26,7 +23,7 @@ internal class AlterInst : ModuleBase
         {
             try
             {
-                string? s = await CodeExecuter.OnRunPlainCode(msg.Body);
+                var s = await CodeExecuter.OnRunPlainCode(msg.Body);
                 if (!s.IsNullOrEmpty())
                     await msg.Bot.SendGroupMessageSimple(msg.SubjectId, s);
                 else
@@ -56,7 +53,7 @@ internal class AlterInst : ModuleBase
 
     private bool OnCmdCode(BotMessage msg, string content)
     {
-        string[] s = content.Split(" > ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var s = content.Split(" > ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (s.Length >= 2)
             _code = s[1];
         return true;
@@ -67,9 +64,9 @@ internal class AlterInst : ModuleBase
         if (content.IsNullOrEmpty())
             return false;
 
-        Task t = new Task(async () =>
+        var t = new Task(async () =>
         {
-            SandBox? sandbox = new SandBox();
+            var sandbox = new SandBox();
             try
             {
                 dynamic? result = await sandbox.RunAsync(content);
@@ -85,5 +82,4 @@ internal class AlterInst : ModuleBase
         t.Start();
         return true;
     }
-
 }

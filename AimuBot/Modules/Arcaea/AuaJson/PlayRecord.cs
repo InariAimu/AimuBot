@@ -18,5 +18,4 @@ public class PlayRecord
     [JsonProperty("miss_count")] public int MissCount { get; set; }
     [JsonProperty("perfect_count")] public int PerfectCount { get; set; }
     [JsonProperty("shiny_perfect_count")] public int ShinyPerfectCount { get; set; }
-
 }

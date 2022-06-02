@@ -25,7 +25,7 @@ internal class Information : ModuleBase
 
     [Command("cs stat",
         Matching = Matching.Full,
-        Level = RBACLevel.Normal)]
+        Level = RbacLevel.Normal)]
     public MessageChain OnStat(BotMessage msg)
     {
         StringBuilder sb = new();

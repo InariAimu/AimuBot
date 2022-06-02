@@ -6,5 +6,4 @@ namespace AimuBot.Modules;
     Command = "ak")]
 public class Arknights : ModuleBase
 {
-
 }

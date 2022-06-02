@@ -1,6 +1,8 @@
 ﻿using System.Net;
-using System.Net.Security;
+using System.Text;
+
 using AimuBot.Core.ModuleMgr;
+using AimuBot.Core.Utils;
 using AimuBot.Modules.Arcaea.AuaJson;
 
 using Newtonsoft.Json;
@@ -9,49 +11,45 @@ namespace AimuBot.Modules.Arcaea;
 
 public partial class Arcaea : ModuleBase
 {
-    [Config("aua_url")]
-    private string _auaUrl = null!;
+    [Config("aua_ua")] private readonly string _auaUA = null!;
 
-    [Config("aua_ua")]
-    private string _auaUA = null!;
+    [Config("aua_url")] private readonly string _auaUrl = null!;
 
-    [Config("pua_url")]
-    private string _puaUrl = null!;
+    [Config("pua_ua")] private readonly string _puaUA = null!;
 
-    [Config("pua_ua")]
-    private string _puaUA = null!;
+    [Config("pua_url")] private readonly string _puaUrl = null!;
 
     public async Task<string> GetFromPyBotArcApi(string request)
     {
-        string? html = "";
         ServicePointManager.ServerCertificateValidationCallback =
-            new RemoteCertificateValidationCallback((obj, cert, chain, errs) => true);
-        using (HttpClient hc = new())
+            (obj, cert, chain, errs) => true;
+
+        var bytes = await (_puaUrl + request).UrlDownload(true, new Dictionary<string, string>
         {
-            LogMessage($"[PyAua query] {request}");
-            hc.DefaultRequestHeaders.Add("User-Agent", _puaUA);
-            html = await hc.GetStringAsync(_puaUrl + request);
-        }
-        return html;
+            { "User-Agent", _puaUA }
+        });
+
+        return Encoding.UTF8.GetString(bytes);
     }
 
-    public async Task<string> GetFromBotArcApi(string request)
+    private async Task<string> GetFromBotArcApi(string request)
     {
-        string? html = "";
         ServicePointManager.ServerCertificateValidationCallback =
-            new RemoteCertificateValidationCallback((obj, cert, chain, errs) => true);
-        using (HttpClient hc = new())
+            (obj, cert, chain, errs) => true;
+
+        LogMessage($"[Aua query] {request}");
+
+        var bytes = await (_auaUrl + request).UrlDownload(true, new Dictionary<string, string>
         {
-            LogMessage($"[Aua query] {request}");
-            hc.DefaultRequestHeaders.Add("User-Agent", _auaUA);
-            html = await hc.GetStringAsync(_auaUrl + request);
-        }
-        return html;
+            { "User-Agent", _auaUA }
+        });
+
+        return Encoding.UTF8.GetString(bytes);
     }
 
-    public async Task<Response?> GetUserRecent(string user_name_or_code)
+    private async Task<Response?> GetUserRecent(string userNameOrCode)
     {
-        string? json = await GetFromBotArcApi("user/info?user=" + user_name_or_code);
+        var json = await GetFromBotArcApi("user/info?user=" + userNameOrCode);
 
         var r = JsonConvert.DeserializeObject<Response>(json);
 
@@ -60,10 +58,11 @@ public partial class Arcaea : ModuleBase
         return r;
     }
 
-    public async Task<Response?> GetUserBest(string user_name_or_code, string song_name, string difficulty)
+    private async Task<Response?> GetUserBest(string userNameOrCode, string songName, string difficulty)
     {
-        string? json =
-            await GetFromBotArcApi($"user/best?usercode={user_name_or_code}&songname={WebUtility.UrlEncode(song_name)}&difficulty={difficulty}");
+        var json =
+            await GetFromBotArcApi(
+                $"user/best?usercode={userNameOrCode}&songname={WebUtility.UrlEncode(songName)}&difficulty={difficulty}");
 
         var r = JsonConvert.DeserializeObject<Response>(json);
 
@@ -72,11 +71,11 @@ public partial class Arcaea : ModuleBase
         return r;
     }
 
-    public async Task<Response?> GetB30ResponseFromAua(string user_code)
+    public async Task<Response?> GetB30ResponseFromAua(string userCode)
     {
-        LogMessage("start b30 query: " + user_code);
+        LogMessage("start b30 query: " + userCode);
 
-        string? json = await GetFromBotArcApi("user/best30?user=" + user_code);
+        var json = await GetFromBotArcApi("user/best30?user=" + userCode);
 
         return JsonConvert.DeserializeObject<Response>(json);
     }

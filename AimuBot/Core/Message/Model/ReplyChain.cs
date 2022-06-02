@@ -1,5 +1,4 @@
-﻿
-using AimuBot.Core.Extensions;
+﻿using AimuBot.Core.Extensions;
 
 namespace AimuBot.Core.Message.Model;
 
@@ -35,17 +34,18 @@ public class ReplyChain : BaseChain
     {
         var args = GetKqCodeArgs(code);
         {
-            uint qq = uint.Parse(args["qq"]);
-            uint seq = uint.Parse(args["seq"]);
-            long uuid = long.Parse(args["uuid"]);
-            uint time = uint.Parse(args["time"]);
-            string? content = ""; //ByteConverter.UnBase64String(args["content"]);
+            var qq = uint.Parse(args["qq"]);
+            var seq = uint.Parse(args["seq"]);
+            var uuid = long.Parse(args["uuid"]);
+            var time = uint.Parse(args["time"]);
+            var content = ""; //ByteConverter.UnBase64String(args["content"]);
 
             return Create(qq, seq, uuid, time, content);
         }
     }
 
     internal static ReplyChain ParseCsCode(string code) =>
+
         // [mirai:at:0]
         Create(0, 0, Convert.ToInt64(code.GetSandwichedText("[mirai:at:", "]")), 0, "");
 

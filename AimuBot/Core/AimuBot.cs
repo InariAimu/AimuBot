@@ -18,11 +18,11 @@ public class AimuBot
 
     public ModuleMgr.ModuleMgr ModuleMgr { get; } = new();
 
-    public static Random Random { get; } = new Random();
+    public static Random Random { get; } = new();
 
     public async Task Start()
     {
-        Config.RBAC.Init();
+        Config.AccessLevelControl.Init();
 
         _dispatcher.InitializeHandlers();
 
@@ -32,7 +32,7 @@ public class AimuBot
         ModuleMgr.Bot = this;
         ModuleMgr.Init();
 
-        Mirai? miraiBot = new Adapters.Mirai();
+        var miraiBot = new Mirai();
         miraiBot.OnMessageReceived += Bot_OnMessageReceived;
         _bots.Add(miraiBot);
 
@@ -47,11 +47,10 @@ public class AimuBot
         _dispatcher.RaiseEvent(sender, args);
     }
 
-    private void Dispatcher_OnMessage(BotAdapter sender, MessageEvent args) => ModuleMgr.DispatchGroupMessage(args.Message);
+    private void Dispatcher_OnMessage(BotAdapter sender, MessageEvent args) =>
+        ModuleMgr.DispatchGroupMessage(args.Message);
 
     private void Dispatcher_OnLog(BotAdapter sender, LogEvent args) => BotLogger.LogV(args.Tag, args.EventMessage);
 
     public void Test() => BotLogger.LogW("Test", "botTest");
-
 }
-

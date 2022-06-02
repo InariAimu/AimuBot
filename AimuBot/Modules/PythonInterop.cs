@@ -13,14 +13,14 @@ namespace AimuBot.Modules;
     Description = "一些Python功能")]
 internal class PythonInterop : ModuleBase
 {
-    [Config("python3", DefaultValue = "d:/Software/Anaconda3/python.exe")]
-    private string _python3 = null!;
-
     [Config("asm_file", DefaultValue = "keystone_module.py")]
-    private string _pyAsmFile = null!;
+    private readonly string _pyAsmFile = null!;
 
     [Config("dasm_file", DefaultValue = "capstone_module.py")]
-    private string _pyDasmFile = null!;
+    private readonly string _pyDasmFile = null!;
+
+    [Config("python3", DefaultValue = "d:/Software/Anaconda3/python.exe")]
+    private readonly string _python3 = null!;
 
     [Command("py-asm",
         Name = "汇编（arm）",
@@ -44,14 +44,14 @@ internal class PythonInterop : ModuleBase
         Tip = "/py-dasm [T|A][<|>] <base_addr>\n<asm_hexcode>",
         Example = "/py-dasm T<\n1A 0C",
         Matching = Matching.StartsWith,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Reply)]
     public MessageChain OnDAsm(BotMessage msg)
     {
         var content = msg.Content;
-        string s = content.SubstringBefore("\n");
-        string orderMode = s.SubstringBefore(" ");
-        string address = s.SubstringAfter(" ");
+        var s = content.SubstringBefore("\n");
+        var orderMode = s.SubstringBefore(" ");
+        var address = s.SubstringAfter(" ");
 
         Dictionary<string, string> param = new()
         {
@@ -69,12 +69,9 @@ internal class PythonInterop : ModuleBase
         StringBuilder sb = new();
         StringBuilder err = new();
 
-        string sArguments = pyFile + " ";
+        var sArguments = pyFile + " ";
 
-        foreach (var (k, v) in param)
-        {
-            sArguments += $"{k} \"{v}\" ";
-        }
+        foreach (var (k, v) in param) sArguments += $"{k} \"{v}\" ";
 
         ProcessStartInfo start = new()
         {
@@ -94,9 +91,10 @@ internal class PythonInterop : ModuleBase
         {
             if (process.StandardOutput.BaseStream.CanRead)
             {
-                string? input = process.StandardOutput.ReadToEnd();
+                var input = process.StandardOutput.ReadToEnd();
                 sb.Append(input);
             }
+
             if (process.StandardError.BaseStream.CanRead)
                 err.Append(process.StandardError.ReadToEnd());
         }

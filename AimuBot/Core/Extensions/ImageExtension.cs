@@ -10,10 +10,8 @@ public static class ImageExtension
         var codecs = ImageCodecInfo.GetImageDecoders();
 
         foreach (var codec in codecs)
-        {
             if (codec.FormatID == format.Guid)
                 return codec;
-        }
         return null;
     }
 
@@ -29,9 +27,10 @@ public static class ImageExtension
         {
             var myEncoder = Encoder.Quality;
 
-            EncoderParameters myEncoderParameters = new EncoderParameters(1);
+            var myEncoderParameters = new EncoderParameters(1);
 
-            myEncoderParameters.Param[0] = new EncoderParameter(myEncoder, quality); ;
+            myEncoderParameters.Param[0] = new EncoderParameter(myEncoder, quality);
+            ;
 
             im.Save(file, jpgEncoder, myEncoderParameters);
         }

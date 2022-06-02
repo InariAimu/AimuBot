@@ -5,7 +5,10 @@ public class TextChain : BaseChain
     public string Content { get; private set; }
 
     private TextChain(string content)
-        : base(ChainType.Text, ChainMode.Multiple) => Content = content;
+        : base(ChainType.Text, ChainMode.Multiple)
+    {
+        Content = content;
+    }
 
     internal void Combine(TextChain chain)
         => Content += chain.Content;

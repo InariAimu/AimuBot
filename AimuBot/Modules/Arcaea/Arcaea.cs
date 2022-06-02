@@ -12,8 +12,10 @@ namespace AimuBot.Modules.Arcaea;
 [Module("Arcaea",
     Command = "arcaea",
     Description = "提供Arcaea查分，b30，谱面预览等功能",
-    EULA = "您应知悉，使用本模块进行Arcaea查分将违反*Arcaea使用条款 3.2-4 和 3.2-6*，以及*Arcaea二次创作管理条例*。\n因使用本功能而造成的损失（包括但不限于账号被lowiro封禁、shadowban等），Aimubot开发组不予承担任何责任。",
-    Privacy = "使用查分将默认您允许Aimubot收集/记录关于您的使用记录，包括且不限于Arcaea用户名、游玩记录等。\n您的数据将用于历史ptt显示、推分建议等功能。\n我们将使用行业安全标准来保存数据并不会提供给任何第三方。")]
+    Eula =
+        "您应知悉，使用本模块进行Arcaea查分将违反*Arcaea使用条款 3.2-4 和 3.2-6*，以及*Arcaea二次创作管理条例*。\n因使用本功能而造成的损失（包括但不限于账号被lowiro封禁、shadowban等），Aimubot开发组不予承担任何责任。",
+    Privacy =
+        "使用查分将默认您允许Aimubot收集/记录关于您的使用记录，包括且不限于Arcaea用户名、游玩记录等。\n您的数据将用于历史ptt显示、推分建议等功能。\n我们将使用行业安全标准来保存数据并不会提供给任何第三方。")]
 public partial class Arcaea : ModuleBase
 {
     private ArcaeaDatabase _db = null!;
@@ -25,14 +27,14 @@ public partial class Arcaea : ModuleBase
 
     public override bool OnInit()
     {
-        _db = new();
+        _db = new ArcaeaDatabase();
         _db.CreateTables();
         return true;
     }
 
     public override bool OnReload()
-    { 
-        _songInfoRaw.LoadFromArcaeaAPPSongList();
+    {
+        _songInfoRaw.LoadFromSlst();
         return true;
     }
 
@@ -47,43 +49,44 @@ public partial class Arcaea : ModuleBase
         SendType = SendType.Reply)]
     public MessageChain OnStoreLocalScore(BotMessage msg)
     {
-        string? content = msg.Content;
-        string[] param_arr = content.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var content = msg.Content;
+        var param_arr = content.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         ScoreDesc sd = new();
-        sd.type = 1;
-        sd.diff = 2;
+        sd.Type = 1;
+        sd.Difficulty = 2;
 
         var m = new Regex(@"\s\d{8}").Match(content);
         if (!m.Success)
             return "";
 
-        string? scoreStr = m.Value;
+        var scoreStr = m.Value;
         content = content.Replace(scoreStr, "");
 
         var md = new Regex(@"\s(pst|prs|ftr|byd)").Match(content);
         if (m.Success)
         {
-            string? diffStr = m.Value;
+            var diffStr = m.Value;
             content = content.Replace(diffStr, "");
-            sd.diff = diffStr.ToLower() switch
+            sd.Difficulty = diffStr.ToLower() switch
             {
                 "pst" => 0,
                 "prs" => 1,
                 "ftr" => 2,
                 "byd" => 3,
-                _ => 2,
+                _     => 2
             };
         }
 
-        string? songId = TryGetSongIdByKeyword(content.Trim());
+        var songId = TryGetSongIdByKeyword(content.Trim());
 
         var song = _songInfoRaw.Songs.SongList.Find(x => x.Id == songId);
         if (song is null)
             return "";
 
-        float rating_f = GetRating(songId, sd.diff);
+        var rating_f = GetRating(songId, sd.Difficulty);
 
         sd.time = BotUtil.Timestamp;
+
         //db.SaveScore(sd);
         return "保存成功";
     }
@@ -95,11 +98,11 @@ public partial class Arcaea : ModuleBase
         Example = "/ac bind nagiha0798\n/ac bind 000000001",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnBind(BotMessage msg)
     {
-        string? content = msg.Content;
+        var content = msg.Content;
         LogMessage($"Bind: {content} -> {msg.SenderId}");
 
         Regex arc_id_regex = new(@"^\d{9}$");
@@ -113,29 +116,31 @@ public partial class Arcaea : ModuleBase
 
             var (succ, bind_info) = _db.GetObject<BindInfoDesc>(
                 "arc_id = $arc_id",
-                new() { { "$arc_id", response.Content.AccountInfo.Code } }
-                );
+                new Dictionary<string, object> { { "$arc_id", response.Content.AccountInfo.Code } }
+            );
             if (succ)
             {
-                bind_info.bind_type = 0;
-                bind_info.qq_id = msg.SenderId;
-                bind_info.arc_id = content;
-                bind_info.name = response.Content.AccountInfo.Name;
+                bind_info.BindType = 0;
+                bind_info.QqId = msg.SenderId;
+                bind_info.ArcId = content;
+                bind_info.Name = response.Content.AccountInfo.Name;
             }
             else
             {
-                bind_info = new()
+                bind_info = new BindInfoDesc
                 {
-                    bind_type = 0,
-                    qq_id = msg.SenderId,
-                    arc_id = response.Content.AccountInfo.Code,
-                    name = response.Content.AccountInfo.Name,
-                    b30_type = 2,
-                    recent_type = 0,
+                    BindType = 0,
+                    QqId = msg.SenderId,
+                    ArcId = response.Content.AccountInfo.Code,
+                    Name = response.Content.AccountInfo.Name,
+                    B30Type = 2,
+                    RecentType = 0
                 };
             }
+
             _db.SaveObject(bind_info);
-            return $"已绑定 {response.Content.AccountInfo.Name}/{response.Content.AccountInfo.Code} ({response.Content.AccountInfo.PttText})";
+            return
+                $"已绑定 {response.Content.AccountInfo.Name}/{response.Content.AccountInfo.Code} ({response.Content.AccountInfo.PttText})";
         }
         else
         {
@@ -150,27 +155,27 @@ public partial class Arcaea : ModuleBase
         Example = "/ac chart 猫魔王 byd\n/ac chart dropdead pst\nac chart ifi",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Send)]
     public MessageChain OnChart(BotMessage msg)
     {
-        string? content = msg.Content;
-        int diff = 2;
-        string name = "";
+        var content = msg.Content;
+        var diff = 2;
+        var name = "";
         if (content.Length < 3)
         {
             name = content;
         }
         else
         {
-            string _difficulty = content[^3..];
+            var _difficulty = content[^3..];
             (diff, name) = _difficulty.ToLower() switch
             {
                 "pst" => (0, content[..^4]),
                 "prs" => (1, content[..^4]),
                 "ftr" => (2, content[..^4]),
                 "byd" => (3, content[..^4]),
-                _ => (2, content)
+                _     => (2, content)
             };
         }
 
@@ -188,7 +193,7 @@ public partial class Arcaea : ModuleBase
 
         try
         {
-            string path = $"Arcaea/previews/{name}_{diff}.jpg";
+            var path = $"Arcaea/previews/{name}_{diff}.jpg";
             FileInfo fi = new(BotUtil.CombinePath(path));
             if (!fi.Exists)
             {
@@ -203,30 +208,26 @@ public partial class Arcaea : ModuleBase
                     Side = s.Side,
                     Difficulty = diff,
                     Rating = GetRating(name, diff),
-                    Notes = GetNotes(name, diff),
+                    Notes = GetNotes(name, diff)
                 };
 
                 var bg = $"arcaea/assets/img/bg/{s.GetBg(diff)}.jpg";
                 LogMessage("[Aff2Preview] " + bg);
 
                 if (s.Side == 0)
-                {
                     r.LoadResource(
                         BotUtil.CombinePath("arcaea/assets/img/note.png"),
                         BotUtil.CombinePath("arcaea/assets/img/note_hold.png"),
                         BotUtil.CombinePath("arcaea/assets/img/arc_body.png"),
                         BotUtil.CombinePath(bg),
                         BotUtil.CombinePath(s.GetCover(diff)));
-                }
                 else
-                {
                     r.LoadResource(
                         BotUtil.CombinePath("arcaea/assets/img/note_dark.png"),
                         BotUtil.CombinePath("arcaea/assets/img/note_hold_dark.png"),
                         BotUtil.CombinePath("arcaea/assets/img/note_hold.png"),
                         BotUtil.CombinePath(bg),
                         BotUtil.CombinePath(s.GetCover(diff)));
-                }
 
                 r.Draw()?.SaveToJpg(BotUtil.CombinePath(path), 95);
 

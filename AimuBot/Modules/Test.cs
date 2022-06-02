@@ -42,9 +42,11 @@ internal class Test : ModuleBase
                     msg.Bot.SendRawMessage(cmd);
                     return true;
                 }
+
                 break;
             }
         }
+
         return false;
     }
 }

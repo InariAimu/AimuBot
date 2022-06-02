@@ -1,5 +1,4 @@
-﻿
-using System.Drawing;
+﻿using System.Drawing;
 using System.Net;
 using System.Net.Security;
 using System.Xml;
@@ -44,16 +43,13 @@ internal class WolframAlpha : ModuleBase
         var success = xml.SelectSingleNode("/queryresult").Attributes["success"].Value == "true";
         var error = xml.SelectSingleNode("/queryresult").Attributes["error"].Value == "true";
 
-        if (!success || error)
-        {
-            return "Wolfram Alpha query error occured.";
-        }
+        if (!success || error) return "Wolfram Alpha query error occured.";
 
         var imgNodes = xml.SelectNodes("/queryresult/pod");
         var podCount = 0;
         List<string> titles = new();
         List<Task> downloadImgTasks = new();
-        
+
         foreach (XmlNode node in imgNodes)
         {
             var title = node.Attributes["title"].Value;
@@ -65,6 +61,7 @@ internal class WolframAlpha : ModuleBase
             LogMessage(title + "," + podCount);
             podCount++;
         }
+
         Task.WaitAll(downloadImgTasks.ToArray());
 
         Font? font = new("exo", 12f, FontStyle.Bold);
@@ -73,6 +70,7 @@ internal class WolframAlpha : ModuleBase
         {
             textBrush.Color = Color.FromArgb((int)0xffff7d00);
         }
+
         SolidBrush? shadeBrush = new(Color.LightGray);
         unchecked
         {
@@ -89,6 +87,7 @@ internal class WolframAlpha : ModuleBase
             width = Math.Max(width, im.Width);
             height += im.Height + 35;
         }
+
         if (width < 340)
             width = 340;
 

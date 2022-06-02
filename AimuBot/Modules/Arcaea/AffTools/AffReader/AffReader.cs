@@ -11,9 +11,9 @@ public class ArcaeaAffReader
     public int AudioOffset;
     public float TimingPointDensityFactor = 1;
 
-    public List<ArcaeaAffEvent> Events = new List<ArcaeaAffEvent>();
+    public List<ArcaeaAffEvent> Events = new();
 
-    public List<TimingGroupProperties> TimingGroupProperties = new List<TimingGroupProperties>();
+    public List<TimingGroupProperties> TimingGroupProperties = new();
 
     private static EventType DetermineType(string line)
     {
@@ -76,14 +76,15 @@ public class ArcaeaAffReader
             stringParser.Skip(1);
             var timing = stringParser.ReadInt(",");
             var num = stringParser.ReadInt(")");
-            if (!noInput) Events.Add(new ArcaeaAffTap
-            {
-                Timing = timing,
-                Track = num,
-                Type = EventType.Tap,
-                TimingGroup = CurrentTimingGroup,
-                NoInput = noInput
-            });
+            if (!noInput)
+                Events.Add(new ArcaeaAffTap
+                {
+                    Timing = timing,
+                    Track = num,
+                    Type = EventType.Tap,
+                    TimingGroup = CurrentTimingGroup,
+                    NoInput = noInput
+                });
             if (num is <= 0 or >= 5)
                 throw new ArcaeaAffFormatException("轨道错误");
         }
@@ -106,15 +107,16 @@ public class ArcaeaAffReader
             var num = stringParser.ReadInt(",");
             var num2 = stringParser.ReadInt(",");
             var num3 = stringParser.ReadInt(")");
-            if (!noInput) Events.Add(new ArcaeaAffHold
-            {
-                Timing = num,
-                EndTiming = num2,
-                Track = num3,
-                Type = EventType.Hold,
-                TimingGroup = CurrentTimingGroup,
-                NoInput = noInput
-            });
+            if (!noInput)
+                Events.Add(new ArcaeaAffHold
+                {
+                    Timing = num,
+                    EndTiming = num2,
+                    Track = num3,
+                    Type = EventType.Hold,
+                    TimingGroup = CurrentTimingGroup,
+                    NoInput = noInput
+                });
             if (num3 is <= 0 or >= 5)
                 throw new ArcaeaAffFormatException("轨道错误");
             if (num2 < num)
@@ -155,25 +157,26 @@ public class ArcaeaAffReader
                 {
                     stringParser.Skip(8);
                     list.Add(stringParser.ReadInt(")"));
-                }
-                while (!(stringParser.Current != ","));
+                } while (!(stringParser.Current != ","));
             }
-            if (!noInput) Events.Add(new ArcaeaAffArc
-            {
-                Timing = num,
-                EndTiming = num2,
-                XStart = xStart,
-                XEnd = xEnd,
-                LineType = lineType,
-                YStart = yStart,
-                YEnd = yEnd,
-                Color = color,
-                IsVoid = isVoid,
-                Type = EventType.Arc,
-                ArcTaps = list,
-                TimingGroup = CurrentTimingGroup,
-                NoInput = noInput
-            });
+
+            if (!noInput)
+                Events.Add(new ArcaeaAffArc
+                {
+                    Timing = num,
+                    EndTiming = num2,
+                    XStart = xStart,
+                    XEnd = xEnd,
+                    LineType = lineType,
+                    YStart = yStart,
+                    YEnd = yEnd,
+                    Color = color,
+                    IsVoid = isVoid,
+                    Type = EventType.Arc,
+                    ArcTaps = list,
+                    TimingGroup = CurrentTimingGroup,
+                    NoInput = noInput
+                });
             if (num2 < num)
                 throw new ArcaeaAffFormatException("持续时间小于0");
         }
@@ -194,8 +197,10 @@ public class ArcaeaAffReader
             var stringParser = new AffStringParser(line);
             stringParser.Skip(7);
             var timing = stringParser.ReadInt(",");
-            var move = new Vector3(stringParser.ReadFloat(","), stringParser.ReadFloat(","), stringParser.ReadFloat(","));
-            var rotate = new Vector3(stringParser.ReadFloat(","), stringParser.ReadFloat(","), stringParser.ReadFloat(","));
+            var move = new Vector3(stringParser.ReadFloat(","), stringParser.ReadFloat(","),
+                stringParser.ReadFloat(","));
+            var rotate = new Vector3(stringParser.ReadFloat(","), stringParser.ReadFloat(","),
+                stringParser.ReadFloat(","));
             var cameraType = stringParser.ReadString(",");
             var num = stringParser.ReadInt(")");
             Events.Add(new ArcaeaAffCamera
@@ -248,9 +253,11 @@ public class ArcaeaAffReader
                         list.Add(text2.Substring(1, text2.Length - 2));
                         text2 = "";
                     }
+
                     if (!num && !flag && !flag2)
                         list.Add(float.Parse(text3));
                 }
+
                 Events.Add(new ArcaeaAffSceneControl
                 {
                     Timing = timing,
@@ -320,6 +327,7 @@ public class ArcaeaAffReader
         {
             throw new ArcaeaAffFormatException(array[0], 1);
         }
+
         int i;
         if (array[1].Contains("TimingPointDensityFactor"))
         {
@@ -331,6 +339,7 @@ public class ArcaeaAffReader
             {
                 throw new ArcaeaAffFormatException(array[1], 2);
             }
+
             try
             {
                 ParseTiming(array[3]);
@@ -339,6 +348,7 @@ public class ArcaeaAffReader
             {
                 throw new ArcaeaAffFormatException(EventType.Timing, array[3], 4);
             }
+
             i = 4;
         }
         else
@@ -351,6 +361,7 @@ public class ArcaeaAffReader
             {
                 throw new ArcaeaAffFormatException(EventType.Timing, array[2], 3);
             }
+
             i = 3;
         }
 
@@ -385,9 +396,7 @@ public class ArcaeaAffReader
                         CurrentTimingGroup = TotalTimingGroup - 1;
                         noInput = NoInputGroup(text);
                         while (TimingGroupProperties.Count <= CurrentTimingGroup)
-                        {
                             TimingGroupProperties.Add(new TimingGroupProperties());
-                        }
                         TimingGroupProperties[CurrentTimingGroup] = new TimingGroupProperties
                         {
                             NoInput = noInput
@@ -410,6 +419,7 @@ public class ArcaeaAffReader
                 throw new ArcaeaAffFormatException(eventType, text, i + 1);
             }
         }
+
         Events.Sort((a, b) => a.Timing.CompareTo(b.Timing));
         if (CurrentTimingGroup == 0) return;
         throw new ArcaeaAffFormatException("Timing Group { 与 } 数量不匹配，请确保\ntiminggroup(){\n与\n};\n各占一行");

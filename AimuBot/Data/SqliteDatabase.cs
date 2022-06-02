@@ -10,41 +10,40 @@ namespace AimuBot.Data;
 
 public class SqliteDatabase
 {
-    protected readonly string connectionString;
-
-    private static Dictionary<Type, string> _typeMapper = new();
+    private static readonly Dictionary<Type, string> TypeMapper = new();
+    protected readonly string ConnectionString;
 
     static SqliteDatabase()
     {
-        _typeMapper.Add(typeof(string), "GetString");
-        _typeMapper.Add(typeof(int), "GetInt32");
-        _typeMapper.Add(typeof(long), "GetInt64");
-        _typeMapper.Add(typeof(double), "GetDouble");
-        _typeMapper.Add(typeof(float), "GetFloat");
+        TypeMapper.Add(typeof(string), "GetString");
+        TypeMapper.Add(typeof(int), "GetInt32");
+        TypeMapper.Add(typeof(long), "GetInt64");
+        TypeMapper.Add(typeof(double), "GetDouble");
+        TypeMapper.Add(typeof(float), "GetFloat");
     }
 
     public SqliteDatabase(string relativeDbFilePath)
     {
-        var _dbFile = BotUtil.CombinePath(relativeDbFilePath);
-        FileInfo _file = new(_dbFile);
-        if (!_file.Exists)
-            _file.Directory?.Create();
+        var dbFile = BotUtil.CombinePath(relativeDbFilePath);
+        FileInfo file = new(dbFile);
+        if (!file.Exists)
+            file.Directory?.Create();
 
-        string baseConnectionString = $"Data Source=" + BotUtil.CombinePath(_dbFile);
-        connectionString = new SqliteConnectionStringBuilder(baseConnectionString)
+        var baseConnectionString = "Data Source=" + BotUtil.CombinePath(dbFile);
+        ConnectionString = new SqliteConnectionStringBuilder(baseConnectionString)
         {
             Mode = SqliteOpenMode.ReadWriteCreate
         }.ToString();
     }
 
-    public int SaveObject(object obj, string table_name_override = "")
+    public int SaveObject(object obj, string tableNameOverride = "")
     {
         var t = obj.GetType();
         var tn = t.GetCustomAttribute<SqliteTableAttribute>();
         if (tn == null)
             return -1;
 
-        string tableName = table_name_override.IsNullOrEmpty() ? tn.Name : table_name_override;
+        var tableName = tableNameOverride.IsNullOrEmpty() ? tn.Name : tableNameOverride;
 
         var members = t.GetFields();
         StringBuilder sb = new($"insert into {tableName} (");
@@ -52,51 +51,46 @@ public class SqliteDatabase
         sb.Append(string.Join(',', members.Select(x =>
         {
             var attr = x.GetCustomAttribute<SqliteColumnAttribute>();
-            return attr != null && !attr.NameOverride.IsNullOrEmpty() ?
-                attr.NameOverride :
-                x.Name;
+            return attr != null && !attr.NameOverride.IsNullOrEmpty() ? attr.NameOverride : x.Name;
         })));
 
         sb.Append(") values (");
-        for (int i = 0; i < members.Length - 1; i++)
+        for (var i = 0; i < members.Length - 1; i++)
         {
             sb.Append('$');
             sb.Append(members[i].Name);
             sb.Append(',');
         }
+
         sb.Append('$');
         sb.Append(members[^1].Name);
         sb.Append(");");
 
-        using SqliteConnection? connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
 
         var command = connection.CreateCommand();
         command.CommandText = sb.ToString();
 
-        for (int i = 0; i < members.Length; i++)
-        {
-            command.Parameters.AddWithValue($"${members[i].Name}", members[i].GetValue(obj));
-        }
+        foreach (var t1 in members)
+            command.Parameters.AddWithValue($"${t1.Name}", t1.GetValue(obj));
+
         return command.ExecuteNonQuery();
     }
 
     public (bool, T?) GetObject<T>(
-        string where_clause,
-        Dictionary<string, object> param_list,
-        string table_name_override = "") where T : notnull, new()
+        string whereClause,
+        Dictionary<string, object> paramList,
+        string tableNameOverride = "") where T : notnull, new()
     {
-        var objects = GetObjects<T>(where_clause, param_list, table_name_override);
-        if (objects.Length == 0)
-            return (false, default(T));
-
-        return (true, objects[0]);
+        var objects = GetObjects<T>(whereClause, paramList, tableNameOverride);
+        return objects.Length == 0 ? (false, default) : (true, objects[0]);
     }
 
     public T[] GetObjects<T>(
-        string where_clause,
-        Dictionary<string, object>? param_list = null,
-        string table_name_override = "") where T : notnull, new()
+        string whereClause,
+        Dictionary<string, object>? paramList = null,
+        string tableNameOverride = "") where T : notnull, new()
     {
         List<T> objects = new();
 
@@ -106,58 +100,55 @@ public class SqliteDatabase
         if (tn == null)
             return objects.ToArray();
 
-        string tableName = table_name_override.IsNullOrEmpty() ? tn.Name : table_name_override;
+        var tableName = tableNameOverride.IsNullOrEmpty() ? tn.Name : tableNameOverride;
 
-        using SqliteConnection? connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
 
         var command = connection.CreateCommand();
-        if (where_clause.IsNullOrEmpty())
+        if (whereClause.IsNullOrEmpty())
             command.CommandText = $"select * from {tableName};";
-        else if (param_list == null)
-            command.CommandText = $"select * from {tableName} {where_clause};";
+        else if (paramList == null)
+            command.CommandText = $"select * from {tableName} {whereClause};";
         else
-            command.CommandText = $"select * from {tableName} where {where_clause};";
+            command.CommandText = $"select * from {tableName} where {whereClause};";
 
-        if (param_list != null)
-        {
-            foreach (var (k, v) in param_list)
-            {
+        if (paramList != null)
+            foreach (var (k, v) in paramList)
                 command.Parameters.AddWithValue(k, v);
-            }
-        }
 
         using var reader = command.ExecuteReader();
-        List<MethodInfo>? methods = typeof(SqliteDataReader).GetMethods().ToList();
+        var methods = typeof(SqliteDataReader).GetMethods().ToList();
 
         while (reader.Read())
         {
             T obj = new();
-            for (int i = 0; i < fields.Length; i++)
+            for (var i = 0; i < fields.Length; i++)
             {
                 var fi = fields[i];
-                var ftype = fi.FieldType;
+                var fieldType = fi.FieldType;
 
-                if (_typeMapper.ContainsKey(ftype))
-                {
-                    var mi = methods.Find(x => x.Name == _typeMapper[ftype]);
-                    if (mi != null)
-                    {
-                        object? fv = mi.Invoke(reader, new object[] { i });
-                        object boxedT = obj;
-                        fi.SetValue(boxedT, fv);
-                        obj = (T)boxedT;
-                    }
-                }
+                if (!TypeMapper.ContainsKey(fieldType)) continue;
+
+                var mi = methods.Find(x => x.Name == TypeMapper[fieldType]);
+
+                if (mi == null) continue;
+
+                var fv = mi.Invoke(reader, new object[] { i });
+                object boxedT = obj;
+                fi.SetValue(boxedT, fv);
+                obj = (T)boxedT;
             }
+
             objects.Add(obj);
         }
+
         return objects.ToArray();
     }
 
     public int ExecuteNoneQuery(string sql)
     {
-        using SqliteConnection? connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
         var command = connection.CreateCommand();
         command.CommandText = sql;
@@ -166,29 +157,27 @@ public class SqliteDatabase
 
     public void CreateTables(params Type[] templates)
     {
-        using SqliteConnection? connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
-
-        int r = 0;
 
         foreach (var template in templates)
         {
             var command = connection.CreateCommand();
             command.CommandText = GetCreateTableSql(template);
-            r = command.ExecuteNonQuery();
+            command.ExecuteNonQuery();
         }
     }
 
-    public string GetCreateTableSql(Type template, string table_name_override = "")
+    public string GetCreateTableSql(Type template, string tableNameOverride = "")
     {
         var tn = template.GetCustomAttribute<SqliteTableAttribute>();
         if (tn == null)
             return "";
 
-        string table = table_name_override.IsEmpty() ? tn.Name : table_name_override;
+        var table = tableNameOverride.IsEmpty() ? tn.Name : tableNameOverride;
         var members = template.GetFields();
         StringBuilder sb = new($"create table if not exists {table} (");
-        for (int i = 0; i < members.Length; i++)
+        for (var i = 0; i < members.Length; i++)
         {
             var cfa = members[i].GetCustomAttribute<SqliteColumnAttribute>();
             if (cfa != null && !cfa.NameOverride.IsNullOrEmpty())
@@ -196,35 +185,28 @@ public class SqliteDatabase
             else
                 sb.Append(members[i].Name);
 
-            var ftype = members[i].FieldType;
-            string sql_type = "";
+            var fieldType = members[i].FieldType;
+            var sqlType = "";
 
             if (cfa != null && cfa.SqliteType != "")
-            {
-                sql_type = cfa.SqliteType;
-            }
-            else if (ftype == typeof(string))
-            {
-                sql_type = "TEXT";
-            }
-            else if (ftype == typeof(double) || ftype == typeof(float))
-            {
-                sql_type = "REAL";
-            }
-            else if (ftype == typeof(int) || ftype == typeof(long) || ftype == typeof(ulong) || ftype == typeof(uint))
-            {
-                sql_type = "INTEGER";
-            }
+                sqlType = cfa.SqliteType;
+            else if (fieldType == typeof(string))
+                sqlType = "TEXT";
+            else if (fieldType == typeof(double) || fieldType == typeof(float))
+                sqlType = "REAL";
+            else if (fieldType == typeof(int) || fieldType == typeof(long) || fieldType == typeof(ulong) ||
+                     fieldType == typeof(uint))
+                sqlType = "INTEGER";
 
-            string constraint = "";
+            var constraint = "";
 
             if (cfa != null && cfa.Constraint != "")
                 constraint = cfa.Constraint;
 
             sb.Append(' ');
-            sb.Append(sql_type);
+            sb.Append(sqlType);
 
-            if (sql_type == "REAL" || sql_type == "INTEGER")
+            if (sqlType == "REAL" || sqlType == "INTEGER")
             {
                 if (constraint == "")
                 {
@@ -268,4 +250,3 @@ public class SqliteDatabase
         return sb.ToString();
     }
 }
-

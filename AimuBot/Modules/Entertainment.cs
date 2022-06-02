@@ -18,5 +18,4 @@ internal class Entertainment : ModuleBase
         State = State.Developing,
         SendType = SendType.Send)]
     public MessageChain OnPixel(BotMessage msg) => "";
-
 }

@@ -1,4 +1,5 @@
-﻿using AimuBot.Core.Events;
+﻿using AimuBot.Core;
+using AimuBot.Core.Events;
 using AimuBot.Core.Message;
 
 namespace AimuBot.Adapters;
@@ -8,11 +9,11 @@ public abstract class BotAdapter
     public string Name { get; set; } = "Bot";
     public string Protocol { get; set; } = "None";
 
-    public event Core.EventDispatcher.BotEvent<MessageEvent>? OnMessageReceived;
+    public event EventDispatcher.BotEvent<MessageEvent>? OnMessageReceived;
 
     internal void RaiseMessageEvent(string message)
     {
-        BotMessage m = BotMessage.FromCSCode(message);
+        var m = BotMessage.FromCSCode(message);
         m.Bot = this;
         OnMessageReceived?.Invoke(this, MessageEvent.Create(Name, LogLevel.Verbose, "", m));
     }

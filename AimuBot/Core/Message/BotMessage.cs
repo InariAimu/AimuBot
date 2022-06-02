@@ -32,7 +32,7 @@ public class BotMessage
     {
         BotMessage messageDesc = new()
         {
-            Raw = csCode,
+            Raw = csCode
         };
 
         ForEachCSCode(csCode, (origin, name, args) =>
@@ -49,7 +49,7 @@ public class BotMessage
             }
             else if (name.StartsWith("cs:"))
             {
-                string? op = name[3..];
+                var op = name[3..];
                 if (op == "gid")
                 {
                     messageDesc.Type = MessageType.Group;
@@ -88,100 +88,102 @@ public class BotMessage
 
     private static void ForEachCSCode(string s, Action<string, string?, string> block)
     {
-        int pos = 0;
-        int lastPos = 0;
-        int len = s.Length - 4;
+        var pos = 0;
+        var lastPos = 0;
+        var len = s.Length - 4;
 
         int findEnding(int start)
         {
-            int pos0 = start;
+            var pos0 = start;
             while (pos0 < s.Length)
-            {
                 switch (s[pos0])
                 {
-                    case '\\': pos0 += 2; break;
+                    case '\\':
+                        pos0 += 2;
+                        break;
                     case ']': return pos0;
-                    default: pos0++; break;
+                    default:
+                        pos0++;
+                        break;
                 }
-            }
+
             return -1;
         }
 
         while (pos < len)
-        {
             switch (s[pos])
             {
                 case '\\':
-                    {
-                        pos += 2;
-                    }
+                {
+                    pos += 2;
+                }
                     break;
                 case '[':
+                {
+                    if (s[pos + 1] == 'm' && s[pos + 2] == 'i' &&
+                        s[pos + 3] == 'r' && s[pos + 4] == 'a' &&
+                        s[pos + 5] == 'i' && s[pos + 6] == ':')
                     {
-                        if (s[pos + 1] == 'm' && s[pos + 2] == 'i' &&
-                            s[pos + 3] == 'r' && s[pos + 4] == 'a' &&
-                            s[pos + 5] == 'i' && s[pos + 6] == ':')
+                        var begin = pos;
+                        pos += 7;
+                        var ending = findEnding(pos);
+                        if (ending == -1)
                         {
-                            int begin = pos;
-                            pos += 7;
-                            int ending = findEnding(pos);
-                            if (ending == -1)
-                            {
-                                block(s[lastPos..], null, "");
-                                return;
-                            }
-                            else
-                            {
-                                if (lastPos < begin)
-                                    block(s.Substring(lastPos, begin - lastPos), null, "");
-                                string? v = s.Substring(begin, ending + 1 - begin);
-                                int splitter = v.IndexOf(':', 7);
-                                block(
-                                    v, splitter == -1 ? v.Substring(7, v.Length - 1 - 7) : v.Substring(7, splitter - 7),
-                                     splitter == -1 ? "" : v.Substring(splitter + 1, v.Length - 1 - (splitter + 1))
-                                );
-                                lastPos = ending + 1;
-                                pos = lastPos;
-                            }
-                        }
-                        else if (s[pos + 1] == 'c' && s[pos + 2] == 's' && s[pos + 3] == ':')
-                        {
-                            int begin = pos;
-                            pos += 4;
-                            int ending = findEnding(pos);
-                            if (ending == -1)
-                            {
-                                block(s.Substring(lastPos), null, "");
-                                return;
-                            }
-                            else
-                            {
-                                if (lastPos < begin)
-                                    block(s.Substring(lastPos, begin - lastPos), null, "");
-                                string? v = s.Substring(begin, ending + 1 - begin);
-                                int splitter = v.IndexOf(':', 4);
-                                block(v, "cs:" + (splitter == -1 ? v.Substring(4, v.Length - 1) : v.Substring(4, splitter - 4)),
-                                    splitter == -1 ? "" : v.Substring(splitter + 1, v.Length - 1 - (splitter + 1))
-                                );
-                                lastPos = ending + 1;
-                                pos = lastPos;
-                            }
+                            block(s[lastPos..], null, "");
+                            return;
                         }
                         else
                         {
-                            pos++;
+                            if (lastPos < begin)
+                                block(s.Substring(lastPos, begin - lastPos), null, "");
+                            var v = s.Substring(begin, ending + 1 - begin);
+                            var splitter = v.IndexOf(':', 7);
+                            block(
+                                v, splitter == -1 ? v.Substring(7, v.Length - 1 - 7) : v.Substring(7, splitter - 7),
+                                splitter == -1 ? "" : v.Substring(splitter + 1, v.Length - 1 - (splitter + 1))
+                            );
+                            lastPos = ending + 1;
+                            pos = lastPos;
                         }
                     }
-                    break;
-                default:
+                    else if (s[pos + 1] == 'c' && s[pos + 2] == 's' && s[pos + 3] == ':')
+                    {
+                        var begin = pos;
+                        pos += 4;
+                        var ending = findEnding(pos);
+                        if (ending == -1)
+                        {
+                            block(s.Substring(lastPos), null, "");
+                            return;
+                        }
+                        else
+                        {
+                            if (lastPos < begin)
+                                block(s.Substring(lastPos, begin - lastPos), null, "");
+                            var v = s.Substring(begin, ending + 1 - begin);
+                            var splitter = v.IndexOf(':', 4);
+                            block(v,
+                                "cs:" + (splitter == -1 ? v.Substring(4, v.Length - 1) : v.Substring(4, splitter - 4)),
+                                splitter == -1 ? "" : v.Substring(splitter + 1, v.Length - 1 - (splitter + 1))
+                            );
+                            lastPos = ending + 1;
+                            pos = lastPos;
+                        }
+                    }
+                    else
                     {
                         pos++;
                     }
+                }
+                    break;
+                default:
+                {
+                    pos++;
+                }
                     break;
             }
-        }
+
         if (lastPos < s.Length)
             block(s[lastPos..], null, "");
     }
 }
-

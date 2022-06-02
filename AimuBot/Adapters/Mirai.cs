@@ -6,13 +6,13 @@ namespace AimuBot.Adapters;
 
 public class Mirai : BotAdapter
 {
-    public AsyncSocket AsyncSocket { get; private set; } = new AsyncSocket();
-
     public Mirai()
     {
         Name = "Mirai";
         Protocol = "CSCode";
     }
+
+    private AsyncSocket AsyncSocket { get; } = new();
 
     public async void WaitForConnection()
     {
@@ -21,10 +21,10 @@ public class Mirai : BotAdapter
         await AsyncSocket.WaitConnection();
     }
 
-    public void AsyncSocket_OnConnected(FuturedSocket sender, SocketConnetedEvent args)
-        => AsyncSocket.Receive();
+    private async void AsyncSocket_OnConnected(FuturedSocket sender, SocketConnectedEvent args)
+        => await AsyncSocket.Receive();
 
-    public void AsyncSocket_OnStringReceived(FuturedSocket sender, StringReceivedEvent args)
+    private void AsyncSocket_OnStringReceived(FuturedSocket sender, StringReceivedEvent args)
         => RaiseMessageEvent(args.Message);
 
     public override async Task SendRawMessage(string message)
@@ -54,5 +54,4 @@ public class Mirai : BotAdapter
 
     public override async Task ReplyGroupMessageImage(long uin, int msgId, string imgPath)
         => await SendRawMessage($"[cs:gs:{uin}][cs:reply:{msgId}][cs:image:{BotUtil.CombinePath(imgPath)}]");
-
 }

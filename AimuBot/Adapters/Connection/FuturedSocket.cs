@@ -1,5 +1,4 @@
-﻿
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -9,33 +8,37 @@ namespace AimuBot.Adapters.Connection;
 
 public class FuturedSocket : IDisposable
 {
-    /// <summary>
-    /// Inner socket
-    /// </summary>
-    public System.Net.Sockets.Socket InnerSocket { get; }
+    public FuturedSocket(Socket socket)
+    {
+        InnerSocket = socket;
+    }
+
+    public FuturedSocket(AddressFamily family, SocketType type, ProtocolType protocol)
+    {
+        InnerSocket = new Socket(family, type, protocol);
+    }
 
     /// <summary>
-    /// Is Connected
+    ///     Inner socket
+    /// </summary>
+    public Socket InnerSocket { get; }
+
+    /// <summary>
+    ///     Is Connected
     /// </summary>
     public bool Connected
         => InnerSocket.Connected;
-
-    public FuturedSocket(Socket socket)
-        => InnerSocket = socket;
-
-    public FuturedSocket(AddressFamily family, SocketType type, ProtocolType protocol)
-        => InnerSocket = new(family, type, protocol);
 
     public void Dispose()
         => InnerSocket?.Dispose();
 
     /// <summary>
-    /// Turn socket into listen mode and accepts the connections from client
+    ///     Turn socket into listen mode and accepts the connections from client
     /// </summary>
     /// <param name="ep"></param>
     /// <param name="timeout"></param>
     /// <returns></returns>
-    public async Task<FuturedSocket> Accept(IPEndPoint ep, int timeout = -1)
+    public async Task<FuturedSocket?> Accept(IPEndPoint ep, int timeout = -1)
     {
         if (!InnerSocket.IsBound)
         {
@@ -55,13 +58,12 @@ public class FuturedSocket : IDisposable
         }
         LeaveAsync(tk, args);
 
-        if (args.AcceptSocket == null) return null;
-        if (!args.AcceptSocket.Connected) return null;
-        return new(args.AcceptSocket);
+        if (args.AcceptSocket is not { Connected: true }) return null;
+        return new FuturedSocket(args.AcceptSocket);
     }
 
     /// <summary>
-    /// Connect to server
+    ///     Connect to server
     /// </summary>
     /// <param name="ep"></param>
     /// <param name="timeout"></param>
@@ -84,7 +86,7 @@ public class FuturedSocket : IDisposable
     }
 
     /// <summary>
-    /// Disconnect from server
+    ///     Disconnect from server
     /// </summary>
     /// <param name="timeout"></param>
     /// <returns></returns>
@@ -105,7 +107,7 @@ public class FuturedSocket : IDisposable
     }
 
     /// <summary>
-    /// Send data
+    ///     Send data
     /// </summary>
     /// <param name="data"></param>
     /// <param name="timeout"></param>
@@ -128,7 +130,7 @@ public class FuturedSocket : IDisposable
     }
 
     /// <summary>
-    /// Receive data
+    ///     Receive data
     /// </summary>
     /// <param name="data"></param>
     /// <param name="timeout"></param>
@@ -153,10 +155,10 @@ public class FuturedSocket : IDisposable
     #region Overload methods
 
     public Task<bool> Connect(string host, int port)
-        => Connect(new(IPAddress.Parse(host), port));
+        => Connect(new IPEndPoint(IPAddress.Parse(host), port));
 
     public Task<bool> Connect(IPAddress addr, int port)
-        => Connect(new(addr, port));
+        => Connect(new IPEndPoint(addr, port));
 
     public Task<int> Send(string str)
         => Send(Encoding.UTF8.GetBytes(str));
@@ -165,9 +167,9 @@ public class FuturedSocket : IDisposable
         => Send(bytes.ToArray());
 
     public Task<FuturedSocket> Accept(string ip, ushort port, int timeout = -1)
-        => Accept(new(IPAddress.Parse(ip), port), timeout);
+        => Accept(new IPEndPoint(IPAddress.Parse(ip), port), timeout);
 
-    private static void OnCompleted(object s, SocketAsyncEventArgs e)
+    private static void OnCompleted(object? s, SocketAsyncEventArgs e)
         => ((AutoResetEvent)e.UserToken)?.Set();
 
     private static void EnterAsync(out AutoResetEvent tk, out SocketAsyncEventArgs args)

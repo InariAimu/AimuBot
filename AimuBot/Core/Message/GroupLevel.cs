@@ -1,7 +1,8 @@
-﻿namespace AimuBot.Core.Message
+﻿namespace AimuBot.Core.Message;
+
+public enum GroupLevel
 {
-    public enum GroupLevel
-    {
-        Member, Admin, Owner
-    }
+    Member,
+    Admin,
+    Owner
 }

@@ -7,4 +7,3 @@ public enum LogLevel
     Warning,
     Error
 }
-

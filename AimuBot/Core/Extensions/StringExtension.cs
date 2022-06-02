@@ -1,23 +1,24 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 namespace AimuBot.Core.Extensions;
 
 public static class StringExtension
 {
-    static readonly System.Globalization.CultureInfo default_culture = new("en-US");
+    private static readonly CultureInfo DefaultCulture = new("en-US");
 
     public static string Drop(this string s, int n) => s[n..];
     public static string DropLast(this string s, int n) => s[^n..];
 
     public static bool StartsWith(this string s, string value, bool ignoreCase) =>
-        s.StartsWith(value, ignoreCase, default_culture);
+        s.StartsWith(value, ignoreCase, DefaultCulture);
 
     public static bool Contains(this string s, string value, bool ignoreCase) =>
         s.Contains(value, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     public static string SubstringAfter(this string s, string value)
     {
-        int pos = s.IndexOf(value);
+        var pos = s.IndexOf(value, StringComparison.Ordinal);
         if (pos == -1)
             return string.Empty;
         return s[(pos + value.Length)..];
@@ -25,7 +26,7 @@ public static class StringExtension
 
     public static string SubstringAfterLast(this string s, string value)
     {
-        int pos = s.LastIndexOf(value);
+        var pos = s.LastIndexOf(value, StringComparison.Ordinal);
         if (pos == -1)
             return string.Empty;
         return s[(pos + value.Length)..];
@@ -33,7 +34,7 @@ public static class StringExtension
 
     public static string SubstringBefore(this string s, string value)
     {
-        int pos = s.IndexOf(value);
+        var pos = s.IndexOf(value, StringComparison.Ordinal);
         if (pos == -1)
             return string.Empty;
         return s[..pos];
@@ -41,7 +42,7 @@ public static class StringExtension
 
     public static string SubstringBeforeLast(this string s, string value)
     {
-        int pos = s.LastIndexOf(value);
+        var pos = s.LastIndexOf(value, StringComparison.Ordinal);
         if (pos == -1)
             return string.Empty;
         return s[..pos];
@@ -68,13 +69,14 @@ public static class StringExtension
             if (s.Contains(left) && s.Contains(right))
                 return s.SubstringAfter(left).SubstringBefore(right);
         }
+
         return string.Empty;
     }
 
     public static string CombinePath(this string s, string path) => Path.Combine(s, path);
 
-    public static string UnEscapeMiraiCode(this string s) => s.Replace("\\[", "[").Replace("\\]", "]").Replace("\\n", "\n").Replace("\\r", "\r")
-            .Replace("\\:", ":").Replace("\\,", ",")
-            .Replace("\\\\", "\\");
-
+    public static string UnEscapeMiraiCode(this string s) => s.Replace("\\[", "[").Replace("\\]", "]")
+        .Replace("\\n", "\n").Replace("\\r", "\r")
+        .Replace("\\:", ":").Replace("\\,", ",")
+        .Replace("\\\\", "\\");
 }

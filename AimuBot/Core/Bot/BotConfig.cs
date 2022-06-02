@@ -12,7 +12,8 @@ public class BotConfig
 
     [JsonProperty("enable_send_message")] public bool EnableSendMessage { get; set; } = true;
 
-    [JsonIgnore]
-    public RBAC RBAC { get; private set; } = new RBAC();
+    [JsonProperty("use_proxy")] public bool UseProxy { get; set; } = true;
+    [JsonProperty("proxy_url")] public string ProxyUrl { get; set; } = "http://localhost:7890";
 
+    [JsonIgnore] public AccessLevelControl AccessLevelControl { get; private set; } = new();
 }

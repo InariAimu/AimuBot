@@ -1,5 +1,4 @@
-﻿
-using AimuBot.Core.Bot;
+﻿using AimuBot.Core.Bot;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
@@ -19,97 +18,92 @@ public partial class Arcaea
         CooldownType = CooldownType.User,
         CooldownSecond = 10,
         Matching = Matching.StartsWith,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnInfo(BotMessage msg)
     {
-        string? content = msg.Content;
+        var content = msg.Content;
 
-        string difficulty_str = content.SubstringAfterLast(" ");
-        int difficulty = difficulty_str.ToLower() switch
+        var difficultyText = content.SubstringAfterLast(" ");
+        var difficulty = difficultyText.ToLower() switch
         {
             "pst" => 0,
             "prs" => 1,
             "ftr" => 2,
             "byd" => 3,
-            _ => -1,
+            _     => -1
         };
 
-        string song_name = "";
+        var songName = "";
         if (difficulty == -1)
         {
             difficulty = 2;
-            song_name = content;
+            songName = content;
         }
         else
         {
-            song_name = content.SubstringBeforeLast(" ");
+            songName = content.SubstringBeforeLast(" ");
         }
 
-        song_name = TryGetSongIdByKeyword(song_name);
+        songName = TryGetSongIdByKeyword(songName);
 
-        var (succ, bind_info) = _db.GetObject<BindInfoDesc>(
+        var (succ, bindInfo) = _db.GetObject<BindInfoDesc>(
             "qq_id = $qq_id",
-            new() { { "$qq_id", msg.SenderId } });
+            new Dictionary<string, object> { { "$qq_id", msg.SenderId } });
 
         if (!succ)
             return "未绑定或id错误\n请使用/ac bind [arcaea数字id] 进行绑定";
 
-        LogMessage($"[ArcInfo] {msg.SenderId}: {song_name}, {difficulty}");
+        LogMessage($"[ArcInfo] {msg.SenderId}: {songName}, {difficulty}");
 
-        string? user_name_or_id = bind_info.arc_id;
+        var userNameOrId = bindInfo.ArcId;
 
-        var response = await GetUserBest(user_name_or_id, song_name, difficulty.ToString());
-        if (response.Status < 0)
+        var response = await GetUserBest(userNameOrId, songName, difficulty.ToString());
+        if (response.Status < 0) return $"{response.Status}: {response.Message}";
+
+        if (bindInfo != null)
         {
-            return $"{response.Status}: {response.Message}";
+            bindInfo.ArcId = response.Content.AccountInfo.Code;
+            bindInfo.Name = response.Content.AccountInfo.Name;
+            _db.SaveObject(bindInfo);
         }
 
-        if (bind_info != null)
-        {
-            bind_info.arc_id = response.Content.AccountInfo.Code;
-            bind_info.name = response.Content.AccountInfo.Name;
-            _db.SaveObject(bind_info);
-        }
+        var accountInfo = response.Content.AccountInfo;
+        var recentScore = response.Content.Record;
 
-        var account_info = response.Content.AccountInfo;
-        var recent_score = response.Content.Record;
-
-        ScoreDesc score_desc = new()
+        ScoreDesc scoreDesc = new()
         {
-            arc_id = account_info.Code,
-            song_id = recent_score.SongId,
-            score = recent_score.Score,
-            diff = recent_score.Difficulty,
-            rating = recent_score.Rating,
-            clear_type = (int)recent_score.ClearType,
-            pure = recent_score.PerfectCount,
-            good = recent_score.PerfectCount - recent_score.ShinyPerfectCount,
-            far = recent_score.NearCount,
-            lost = recent_score.MissCount,
-            time = recent_score.TimePlayed,
+            ArcId = accountInfo.Code,
+            SongId = recentScore.SongId,
+            Score = recentScore.Score,
+            Difficulty = recentScore.Difficulty,
+            Rating = recentScore.Rating,
+            ClearType = (int)recentScore.ClearType,
+            Pure = recentScore.PerfectCount,
+            Good = recentScore.PerfectCount - recentScore.ShinyPerfectCount,
+            Far = recentScore.NearCount,
+            Lost = recentScore.MissCount,
+            time = recentScore.TimePlayed
         };
-        _db.SaveObject(score_desc);
+        _db.SaveObject(scoreDesc);
 
         PttHistoryDesc pttHistoryDesc = new()
         {
-            arc_id = account_info.Code,
-            ptt = account_info.RealRating,
-            time = recent_score.TimePlayed,
-            type = 0,
+            ArcId = accountInfo.Code,
+            Ptt = accountInfo.RealRating,
+            Time = recentScore.TimePlayed,
+            Type = 0
         };
         _db.SaveObject(pttHistoryDesc);
 
-        var im = GetRecentImage(response, bind_info.arc_id, bind_info.recent_type);
+        var im = GetRecentImage(response, bindInfo.ArcId, bindInfo.RecentType);
         if (im != null)
         {
-            im.Save(BotUtil.CombinePath($"Arcaea/recents/{user_name_or_id}.jpg"));
-            return new MessageBuilder(ImageChain.Create($"Arcaea/recents/{user_name_or_id}.jpg")).Build();
+            im.Save(BotUtil.CombinePath($"Arcaea/recents/{userNameOrId}.jpg"));
+            return new MessageBuilder(ImageChain.Create($"Arcaea/recents/{userNameOrId}.jpg")).Build();
         }
-        else
-        {
-            LogMessage("[ArcInfo] Render Image Error");
-        }
+
+        LogMessage("[ArcInfo] Render Image Error");
 
         return "";
     }
@@ -126,53 +120,48 @@ public partial class Arcaea
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnRecentUsrInfo(BotMessage msg)
     {
-        string? content = msg.Content;
+        var content = msg.Content;
 
-        string difficulty_str = content.SubstringAfterLast(" ");
-        int difficulty = difficulty_str.ToLower() switch
+        var difficultyText = content.SubstringAfterLast(" ");
+        var difficulty = difficultyText.ToLower() switch
         {
             "pst" => 0,
             "prs" => 1,
             "ftr" => 2,
             "byd" => 3,
-            _ => -1,
+            _     => -1
         };
 
-        string song_name;
+        string songName;
         if (difficulty == -1)
         {
             difficulty = 2;
-            song_name = content;
+            songName = content;
         }
         else
         {
-            song_name = content.SubstringBeforeLast(" ").SubstringAfter(" ");
+            songName = content.SubstringBeforeLast(" ").SubstringAfter(" ");
         }
 
-        song_name = TryGetSongIdByKeyword(song_name);
+        songName = TryGetSongIdByKeyword(songName);
 
-        string? user_name_or_id = content.SubstringBefore(" ");
+        var userNameOrId = content.SubstringBefore(" ");
 
-        LogMessage($"[ArcUsrInfo] {user_name_or_id}: {song_name}, {difficulty}");
+        LogMessage($"[ArcUsrInfo] {userNameOrId}: {songName}, {difficulty}");
 
-        var response = await GetUserBest(user_name_or_id, song_name, difficulty.ToString());
-        if (response.Status < 0)
-        {
-            return $"{response.Status}: {response.Message}";
-        }
+        var response = await GetUserBest(userNameOrId, songName, difficulty.ToString());
+        if (response.Status < 0) return $"{response.Status}: {response.Message}";
 
-        var account_info = response.Content.AccountInfo;
+        var accountInfo = response.Content.AccountInfo;
 
-        var im = GetRecentImage(response, account_info.UserId, 0);
+        var im = GetRecentImage(response, accountInfo.UserId, 0);
         if (im != null)
         {
-            im.Save(BotUtil.CombinePath($"Arcaea/recents/{user_name_or_id}.jpg"));
-            return new MessageBuilder(ImageChain.Create($"Arcaea/recents/{user_name_or_id}.jpg")).Build();
+            im.Save(BotUtil.CombinePath($"Arcaea/recents/{userNameOrId}.jpg"));
+            return new MessageBuilder(ImageChain.Create($"Arcaea/recents/{userNameOrId}.jpg")).Build();
         }
-        else
-        {
-            LogMessage("[ArcInfo] Render Image Error");
-        }
+
+        LogMessage("[ArcInfo] Render Image Error");
 
         return "";
     }

@@ -9,7 +9,10 @@ public class AtChain : BaseChain
     internal string? DisplayString { get; set; }
 
     private AtChain(uint uin)
-        : base(ChainType.At, ChainMode.Multiple) => AtUin = uin;
+        : base(ChainType.At, ChainMode.Multiple)
+    {
+        AtUin = uin;
+    }
 
     public static AtChain Create(uint memberUin)
         => new(memberUin);
@@ -18,12 +21,13 @@ public class AtChain : BaseChain
     {
         var args = GetKqCodeArgs(code);
         {
-            string? atUin = args["qq"];
+            var atUin = args["qq"];
             return Create(atUin == "all" ? 0 : uint.Parse(atUin));
         }
     }
 
-    internal static AtChain ParseCsCode(string code) => Create(Convert.ToUInt32(code.GetSandwichedText("[mirai:at", "]")));
+    internal static AtChain ParseCsCode(string code) =>
+        Create(Convert.ToUInt32(code.GetSandwichedText("[mirai:at", "]")));
 
     public override string ToKqCode()
         => $"[KQ:at,qq={(AtUin == 0 ? "all" : AtUin.ToString())}]";

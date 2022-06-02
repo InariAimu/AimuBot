@@ -9,36 +9,36 @@ public class AsyncSocket : IDisposable
 {
     public delegate void SocketEvent<in TArgs>(FuturedSocket sender, TArgs args);
 
-    protected FuturedSocket _listen_socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-    protected FuturedSocket _work_socket = null!;
+    private readonly ByteBuffer _buff = ByteBuffer.Allocate(1024);
 
-    public ByteBuffer buff = ByteBuffer.Allocate(1024);
+    private readonly FuturedSocket _listenSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+    private FuturedSocket _workSocket = null!;
 
-    public SocketEvent<SocketConnetedEvent>? OnConnected;
+    public SocketEvent<SocketConnectedEvent>? OnConnected;
+    public SocketEvent<SocketDisconnectedEvent>? OnDisconnected;
     public SocketEvent<StringReceivedEvent>? OnStringReceived;
-    public SocketEvent<SocketDisconnetedEvent>? OnDisconnected;
 
-    public bool Connected => _work_socket.Connected;
+    public bool Connected => _workSocket.Connected;
 
     public void Dispose()
-        => _work_socket?.Dispose();
+        => _workSocket?.Dispose();
 
     public async Task WaitConnection()
     {
         Console.WriteLine("Start listen");
-        _work_socket = await _listen_socket.Accept("127.0.0.1", 10616);
+        _workSocket = await _listenSocket.Accept("127.0.0.1", 10616);
 
         Console.WriteLine("Connected");
-        OnConnected?.Invoke(_work_socket, new());
+        OnConnected?.Invoke(_workSocket, new SocketConnectedEvent());
     }
 
     public async Task SendString(string str)
     {
-        byte[] sendBytes = Encoding.UTF8.GetBytes(str);
-        ByteBuffer buff = ByteBuffer.Allocate(4 + sendBytes.Length);
+        var sendBytes = Encoding.UTF8.GetBytes(str);
+        var buff = ByteBuffer.Allocate(4 + sendBytes.Length);
         buff.WriteInt(sendBytes.Length);
         buff.WriteBytes(sendBytes, 0, sendBytes.Length);
-        int len = await _work_socket.Send(buff.ToArray());
+        var len = await _workSocket.Send(buff.ToArray());
 
         //await _work_socket.Send(BitConverter.GetBytes(str.Length));
         //await _work_socket.Send(Encoding.UTF8.GetBytes(str));
@@ -46,55 +46,52 @@ public class AsyncSocket : IDisposable
 
     public async Task Receive()
     {
-        byte[]? buffer = new byte[1024];
+        var buffer = new byte[1024];
         while (true)
-        {
             try
             {
-                int bytesRead = await _work_socket.Receive(buffer);
+                var bytesRead = await _workSocket.Receive(buffer);
                 if (bytesRead > 0)
                 {
-                    buff.WriteBytes(buffer, 0, bytesRead);
-                    buff.MarkReaderIndex();
-                    int headLength = buff.ReadInt();
-                    int msgLength = headLength;
-                    int readByteLength = buff.ReadableBytes();
+                    _buff.WriteBytes(buffer, 0, bytesRead);
+                    _buff.MarkReaderIndex();
+                    var headLength = _buff.ReadInt();
+                    var readByteLength = _buff.ReadableBytes();
 
-                    if (msgLength > readByteLength)
+                    if (headLength > readByteLength)
                     {
-                        buff.ResetReaderIndex();
+                        _buff.ResetReaderIndex();
                     }
                     else
                     {
+                        var filthyBytes = _buff.ToArray();
+                        var s = Encoding.UTF8.GetString(filthyBytes, 4, filthyBytes.Length - 4);
 
-                        byte[] filthyBytes = buff.ToArray();
-                        string? s = Encoding.UTF8.GetString(filthyBytes, 4, filthyBytes.Length - 4);
                         //Console.WriteLine("Msg: " + s);
-                        OnStringReceived?.Invoke(_work_socket, new(s));
+                        OnStringReceived?.Invoke(_workSocket, new StringReceivedEvent(s));
 
-                        buff.Clear();
-                        int useLength = filthyBytes.Length;
-                        int lastOffSetLength = filthyBytes.Length - useLength;
+                        _buff.Clear();
+                        var useLength = filthyBytes.Length;
+                        var lastOffSetLength = filthyBytes.Length - useLength;
                         if (lastOffSetLength > 0)
-                            buff.WriteBytes(filthyBytes, lastOffSetLength, filthyBytes.Length);
+                            _buff.WriteBytes(filthyBytes, lastOffSetLength, filthyBytes.Length);
                     }
                 }
                 else
                 {
                     Console.WriteLine("Disconnected");
-                    OnDisconnected?.Invoke(_work_socket, new());
-                    _work_socket.InnerSocket.Shutdown(SocketShutdown.Both);
-                    _work_socket.InnerSocket.Close();
+                    OnDisconnected?.Invoke(_workSocket, new SocketDisconnectedEvent());
+                    _workSocket.InnerSocket.Shutdown(SocketShutdown.Both);
+                    _workSocket.InnerSocket.Close();
                     return;
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"{ex.StackTrace}\n{ex.Message}");
-                _work_socket.InnerSocket.Shutdown(SocketShutdown.Both);
-                _work_socket.InnerSocket.Close();
+                _workSocket.InnerSocket.Shutdown(SocketShutdown.Both);
+                _workSocket.InnerSocket.Close();
                 return;
             }
-        }
     }
 }

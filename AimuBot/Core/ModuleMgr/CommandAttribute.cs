@@ -1,5 +1,6 @@
-﻿
-using AimuBot.Core.Bot;
+﻿using AimuBot.Core.Bot;
+
+using JetBrains.Annotations;
 
 namespace AimuBot.Core.ModuleMgr;
 
@@ -10,14 +11,14 @@ public enum Matching
     StartsWithNoLeadChar,
     Regex,
     AnyWithLeadChar,
-    Any,
+    Any
 }
 
 public enum SendType
 {
     Custom,
     Reply,
-    Send,
+    Send
 }
 
 public enum State
@@ -25,7 +26,7 @@ public enum State
     Normal,
     Test,
     Developing,
-    DisableByDefault,
+    DisableByDefault
 }
 
 public enum CooldownType
@@ -34,14 +35,15 @@ public enum CooldownType
     User,
     Group,
     Bot,
-    Global,
+    Global
 }
 
+[MeansImplicitUse]
 [AttributeUsage(AttributeTargets.Method)]
 public class CommandAttribute : Attribute
 {
     public string Name { get; set; } = "";
-    public string Command { get; } = "";
+    public string Command { get; }
     public string[]? Alias { get; set; }
     public string Category { get; set; } = "";
     public string Description { get; set; } = "";
@@ -52,10 +54,13 @@ public class CommandAttribute : Attribute
     public int CooldownSecond { get; set; }
     public State State { get; set; } = State.Normal;
     public Matching Matching { get; set; } = Matching.StartsWith;
-    public RBACLevel Level { get; set; } = RBACLevel.Normal;
+    public RbacLevel Level { get; set; } = RbacLevel.Normal;
     public SendType SendType { get; set; } = SendType.Custom;
 
-    public CommandAttribute(string cmd) => Command = cmd;
+    public CommandAttribute(string cmd)
+    {
+        Command = cmd;
+    }
 
     /// <summary>
     /// For display purpose. replaced \n to \\n

@@ -2,7 +2,6 @@
 
 namespace AimuBot.Core.ModuleMgr;
 
-
 [AttributeUsage(AttributeTargets.Field)]
 public class ConfigAttribute : Attribute
 {
@@ -25,43 +24,28 @@ public class ModuleConfig
     public void Store(string moduleName, string key, object value)
     {
         if (ModuleConfs.TryGetValue(moduleName, out var dict))
-        {
             dict.Add(key, value);
-        }
         else
-        {
-            ModuleConfs.Add(moduleName, new()
+            ModuleConfs.Add(moduleName, new Dictionary<string, object>
             {
-                { key, value },
+                { key, value }
             });
-        }
     }
 
     public bool TryGet<T>(string moduleName, string key, out T? value)
     {
         value = default;
-        if (ModuleConfs.TryGetValue(moduleName, out var dict))
-        {
-            if (dict.TryGetValue(key, out object v))
-            {
-                value = (T?)v;
-                if (v is T?)
-                    return true;
-            }
-        }
-        return false;
+        if (!ModuleConfs.TryGetValue(moduleName, out var dict)) return false;
+        if (!dict.TryGetValue(key, out var v)) return false;
+        value = (T?)v;
+        return v is T?;
     }
 
     public object? Get(string moduleName, string key)
     {
         object? value = default;
-        if (ModuleConfs.TryGetValue(moduleName, out var dict))
-        {
-            if (dict.TryGetValue(key, out object? v))
-            {
-                value = v;
-            }
-        }
+        if (!ModuleConfs.TryGetValue(moduleName, out var dict)) return value;
+        if (dict.TryGetValue(key, out var v)) value = v;
         return value;
     }
 }

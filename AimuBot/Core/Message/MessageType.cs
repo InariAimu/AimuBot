@@ -1,7 +1,9 @@
-﻿namespace AimuBot.Core.Message
+﻿namespace AimuBot.Core.Message;
+
+public enum MessageType
 {
-    public enum MessageType
-    {
-        None, Group, Friend, GroupTemp
-    }
+    None,
+    Group,
+    Friend,
+    GroupTemp
 }

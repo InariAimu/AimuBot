@@ -9,6 +9,7 @@ using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
+
 using LunaUI.Layouts;
 
 using Pinyin4net;
@@ -37,12 +38,11 @@ internal class Misc : ModuleBase
             VCharType = HanyuPinyinVCharType.WITH_V,
             CaseType = HanyuPinyinCaseType.LOWERCASE
         };
-        
-        var cats = new[]{ "喵", "喵", "苗", "秒", "妙", "喵~" };
+
+        var cats = new[] { "喵", "喵", "苗", "秒", "妙", "喵~" };
         var rev = "";
-        
+
         foreach (var c in msg.Content)
-        {
             try
             {
                 var id = PinyinHelper.ToHanyuPinyinStringArray(c, format)[0];
@@ -52,7 +52,6 @@ internal class Misc : ModuleBase
             {
                 rev += c;
             }
-        }
 
         return rev;
     }
@@ -67,7 +66,7 @@ internal class Misc : ModuleBase
         CooldownType = CooldownType.Bot,
         CooldownSecond = 15,
         Matching = Matching.StartsWith,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Send)]
     public MessageChain OnGuy(BotMessage msg)
     {
@@ -92,11 +91,11 @@ internal class Misc : ModuleBase
         {
             Font f = new("微软雅黑", 40, FontStyle.Regular, GraphicsUnit.Pixel);
             var sf = g.MeasureString(content, f);
-            float w = sf.Width > 380 ? ui.Root.Root.Size.Width + sf.Width - 380 : ui.Root.Root.Size.Width;
+            var w = sf.Width > 380 ? ui.Root.Root.Size.Width + sf.Width - 380 : ui.Root.Root.Size.Width;
             ui.Root.Root.Size = new Size((int)w, ui.Root.Root.Size.Height);
-            ui.GetNodeByPath<LuiColorLayer>("ColorLayer").Size = new Size((int)w, ui.Root.Root.Size.Height);
+            ui.GetNodeByPath<LuiColorLayer>("ColorLayer").Size = ui.Root.Root.Size with { Width = (int)w };
 
-            ui.GetNodeByPath<LuiText>("Text1").Size = new((int)sf.Width + 50, 55);
+            ui.GetNodeByPath<LuiText>("Text1").Size = new Size((int)sf.Width + 50, 55);
         }
 
         ui.Render().SaveToJpg(BotUtil.CombinePath("Generate/Guy_gen.jpg"), 85);
@@ -112,7 +111,7 @@ internal class Misc : ModuleBase
         Category = "杂项",
         NeedSensitivityCheck = true,
         Matching = Matching.StartsWith,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Send)]
     public MessageChain OnRoll(BotMessage msg)
     {
@@ -134,7 +133,7 @@ internal class Misc : ModuleBase
         Example = "",
         Category = "杂项",
         Matching = Matching.StartsWithNoLeadChar,
-        Level = RBACLevel.Normal,
+        Level = RbacLevel.Normal,
         SendType = SendType.Send)]
     public async Task<MessageChain> OnCommandGithubParser(BotMessage msg)
     {
@@ -159,9 +158,8 @@ internal class Misc : ModuleBase
         catch (Exception e)
         {
             LogMessage("Not a repository link. \n" +
-                              $"{e.Message}");
+                       $"{e.Message}");
             return "";
         }
     }
-
 }

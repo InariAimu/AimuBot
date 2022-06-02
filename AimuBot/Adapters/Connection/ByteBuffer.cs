@@ -1,13 +1,15 @@
-﻿namespace AimuBot.Adapters.Connection;
+﻿using System.Text;
+
+namespace AimuBot.Adapters.Connection;
 
 public class ByteBuffer
 {
-    private byte[] _internalBuff;
-    private int _readIndex = 0;
-    private int _writeIndex = 0;
-    private int _markReadIndex = 0;
-    private int _markWirteIndex = 0;
     private int _capacity;
+    private byte[] _internalBuff;
+    private int _markReadIndex;
+    private int _markWriteIndex;
+    private int _readIndex;
+    private int _writeIndex;
 
     private ByteBuffer(int capacity)
     {
@@ -36,30 +38,30 @@ public class ByteBuffer
 
     private int FixSizeAndReset(int currLen, int futureLen)
     {
-        if (futureLen > currLen)
-        {
-            int size = FixLength(currLen) * 2;
+        if (futureLen <= currLen) return futureLen;
+        var size = FixLength(currLen) * 2;
 
-            if (futureLen > size)
-                size = FixLength(futureLen) * 2;
+        if (futureLen > size)
+            size = FixLength(futureLen) * 2;
 
-            byte[] newbuf = new byte[size];
-            Array.Copy(_internalBuff, 0, newbuf, 0, currLen);
-            _internalBuff = newbuf;
-            _capacity = newbuf.Length;
-        }
+        var newBuff = new byte[size];
+        Array.Copy(_internalBuff, 0, newBuff, 0, currLen);
+        _internalBuff = newBuff;
+        _capacity = newBuff.Length;
+
         return futureLen;
     }
 
     private int FixLength(int length)
     {
-        int n = 2;
-        int b = 2;
+        var n = 2;
+        var b = 2;
         while (b < length)
         {
             b = 2 << n;
             n++;
         }
+
         return b;
     }
 
@@ -67,17 +69,15 @@ public class ByteBuffer
     {
         lock (this)
         {
-            int offset = length - startIndex;
+            var offset = length - startIndex;
             if (offset <= 0) return this;
-            int total = offset + _writeIndex;
-            int len = _internalBuff.Length;
+            var total = offset + _writeIndex;
+            var len = _internalBuff.Length;
             FixSizeAndReset(len, total);
-            for (int i = _writeIndex, j = startIndex; i < total; i++, j++)
-            {
-                _internalBuff[i] = bytes[j];
-            }
+            for (int i = _writeIndex, j = startIndex; i < total; i++, j++) _internalBuff[i] = bytes[j];
             _writeIndex = total;
         }
+
         return this;
     }
 
@@ -87,12 +87,7 @@ public class ByteBuffer
     public ByteBuffer WriteBytes(byte[] bytes)
         => WriteBytes(bytes, bytes.Length);
 
-    public ByteBuffer Write(ByteBuffer buffer)
-    {
-        if (buffer == null) return this;
-        if (buffer.ReadableBytes() <= 0) return this;
-        return WriteBytes(buffer.ToArray());
-    }
+    public ByteBuffer Write(ByteBuffer buffer) => buffer.ReadableBytes() <= 0 ? this : WriteBytes(buffer.ToArray());
 
     public ByteBuffer WriteShort(short value)
         => WriteBytes(flip(BitConverter.GetBytes(value)));
@@ -102,22 +97,23 @@ public class ByteBuffer
 
     public ByteBuffer WriteString(string value)
     {
-        int len = value.Length;
+        var len = value.Length;
         WriteInt(len);
-        WriteBytes(System.Text.Encoding.UTF8.GetBytes(value));
+        WriteBytes(Encoding.UTF8.GetBytes(value));
         return this;
     }
 
     public string ReadString()
     {
-        int len = ReadInt();
-        byte[] bytes = new byte[len];
+        var len = ReadInt();
+        var bytes = new byte[len];
         ReadBytes(bytes, 0, len);
 
-        return System.Text.Encoding.UTF8.GetString(bytes);
+        return Encoding.UTF8.GetString(bytes);
     }
 
     public ByteBuffer WriteInt(int value) =>
+
         //byte[] array = new byte[4];
         //for (int i = 3; i >= 0; i--)
         //{
@@ -140,12 +136,13 @@ public class ByteBuffer
     {
         lock (this)
         {
-            int afterLen = _writeIndex + 1;
-            int len = _internalBuff.Length;
+            var afterLen = _writeIndex + 1;
+            var len = _internalBuff.Length;
             FixSizeAndReset(len, afterLen);
             _internalBuff[_writeIndex] = value;
             _writeIndex = afterLen;
         }
+
         return this;
     }
 
@@ -153,14 +150,14 @@ public class ByteBuffer
 
     public byte ReadByte()
     {
-        byte b = _internalBuff[_readIndex];
+        var b = _internalBuff[_readIndex];
         _readIndex++;
         return b;
     }
 
     private byte[] Read(int len)
     {
-        byte[] bytes = new byte[len];
+        var bytes = new byte[len];
         Array.Copy(_internalBuff, _readIndex, bytes, 0, len);
         if (BitConverter.IsLittleEndian)
             Array.Reverse(bytes);
@@ -186,27 +183,24 @@ public class ByteBuffer
 
     public void ReadBytes(byte[] disbytes, int disstart, int len)
     {
-        int size = disstart + len;
-        for (int i = disstart; i < size; i++)
-        {
-            disbytes[i] = ReadByte();
-        }
+        var size = disstart + len;
+        for (var i = disstart; i < size; i++) disbytes[i] = ReadByte();
     }
 
     public void DiscardReadBytes()
     {
         if (_readIndex <= 0) return;
-        int len = _internalBuff.Length - _readIndex;
-        byte[] newbuf = new byte[len];
-        Array.Copy(_internalBuff, _readIndex, newbuf, 0, len);
-        _internalBuff = newbuf;
+        var len = _internalBuff.Length - _readIndex;
+        var newBuff = new byte[len];
+        Array.Copy(_internalBuff, _readIndex, newBuff, 0, len);
+        _internalBuff = newBuff;
         _writeIndex -= _readIndex;
         _markReadIndex -= _readIndex;
         if (_markReadIndex < 0)
             _markReadIndex = _readIndex;
-        _markWirteIndex -= _readIndex;
-        if (_markWirteIndex < 0 || _markWirteIndex < _readIndex || _markWirteIndex < _markReadIndex)
-            _markWirteIndex = _writeIndex;
+        _markWriteIndex -= _readIndex;
+        if (_markWriteIndex < 0 || _markWriteIndex < _readIndex || _markWriteIndex < _markReadIndex)
+            _markWriteIndex = _writeIndex;
         _readIndex = 0;
     }
 
@@ -216,7 +210,7 @@ public class ByteBuffer
         _readIndex = 0;
         _writeIndex = 0;
         _markReadIndex = 0;
-        _markWirteIndex = 0;
+        _markWriteIndex = 0;
     }
 
     public void SetReaderIndex(int index)
@@ -232,20 +226,20 @@ public class ByteBuffer
     }
 
     public void MarkWriterIndex()
-        => _markWirteIndex = _writeIndex;
+        => _markWriteIndex = _writeIndex;
 
     public void ResetReaderIndex()
         => _readIndex = _markReadIndex;
 
     public void ResetWriterIndex()
-        => _writeIndex = _markWirteIndex;
+        => _writeIndex = _markWriteIndex;
 
     public int ReadableBytes()
         => _writeIndex - _readIndex;
 
     public byte[] ToArray()
     {
-        byte[] bytes = new byte[_writeIndex];
+        var bytes = new byte[_writeIndex];
         Array.Copy(_internalBuff, 0, bytes, 0, bytes.Length);
         return bytes;
     }
@@ -253,4 +247,3 @@ public class ByteBuffer
     public int GetCapacity()
         => _capacity;
 }
-

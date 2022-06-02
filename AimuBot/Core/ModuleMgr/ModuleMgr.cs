@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+
 using AimuBot.Core.Message;
 using AimuBot.Core.Utils;
 using AimuBot.Modules;
@@ -9,29 +10,26 @@ namespace AimuBot.Core.ModuleMgr;
 
 public class ModuleMgr
 {
+    private readonly List<ModuleBase> _modules = new();
     public AimuBot Bot { get; set; } = null!;
     public ModuleConfig? ModuleConfig { get; set; }
 
-    private readonly List<ModuleBase> _modules = new();
-
     public bool LoadSubModulesConfig()
     {
-        string path = BotUtil.CombinePath("module_config.json");
+        var path = BotUtil.CombinePath("module_config.json");
         if (File.Exists(path))
         {
             ModuleConfig = JsonConvert.DeserializeObject<ModuleConfig>(File.ReadAllText(path));
             return true;
         }
-        else
-        {
-            ModuleConfig = new();
-            return false;
-        }
+
+        ModuleConfig = new ModuleConfig();
+        return false;
     }
 
     public void SaveSubModulesConfig()
     {
-        string path = BotUtil.CombinePath("module_config.json");
+        var path = BotUtil.CombinePath("module_config.json");
         if (ModuleConfig is not null)
             File.WriteAllText(path, JsonConvert.SerializeObject(ModuleConfig, Formatting.Indented));
     }
@@ -42,7 +40,6 @@ public class ModuleMgr
 
         var types = Assembly.GetExecutingAssembly().GetTypes();
         foreach (var type in types)
-        {
             if (type.IsClass && type.BaseType == typeof(ModuleBase))
             {
                 BotLogger.LogI("LoadModule", $"{type} {type.Name}");
@@ -59,22 +56,22 @@ public class ModuleMgr
 
                     //load module config
                     var fields = type.GetFields(
-                         BindingFlags.NonPublic |
-                         BindingFlags.Instance);
+                        BindingFlags.NonPublic |
+                        BindingFlags.Instance);
 
                     foreach (var field in fields)
                     {
                         var ca = field.GetCustomAttribute<ConfigAttribute>();
-                        if (ca is not null)
+                        if (ca is null) continue;
+
+                        var fv = ModuleConfig.Get(type.FullName, ca.Name);
+                        if (fv is null)
                         {
-                            var fv = ModuleConfig.Get(type.FullName, ca.Name);
-                            if (fv is null)
-                            {
-                                fv = ca.DefaultValue;
-                                ModuleConfig.Store(type.FullName, ca.Name, ca.DefaultValue);
-                            }
-                            field.SetValue(module, fv);
+                            fv = ca.DefaultValue;
+                            ModuleConfig.Store(type.FullName, ca.Name, ca.DefaultValue);
                         }
+
+                        field.SetValue(module, fv);
                     }
                 }
                 catch (Exception ex)
@@ -85,12 +82,11 @@ public class ModuleMgr
 
                 _modules.Add(module);
             }
-        }
 
         if (!hasConfigFile)
         {
             BotLogger.LogW($"{nameof(ModuleMgr)}.{nameof(Init)}",
-               $"No config file detected. Generate one.");
+                "No config file detected. Generate one.");
             SaveSubModulesConfig();
         }
 
@@ -102,7 +98,7 @@ public class ModuleMgr
     {
         Information.MessageReceived++;
 
-        bool rev = false;
+        var rev = false;
 
         foreach (var module in _modules)
         {
@@ -111,6 +107,7 @@ public class ModuleMgr
                 rev = true;
                 break;
             }
+
             if (module.OnGroupMessage(messageDesc))
             {
                 rev = true;
@@ -140,6 +137,7 @@ public class ModuleMgr
         {
             return ex.Message;
         }
+
         return "";
     }
 }

@@ -1,7 +1,7 @@
 ﻿namespace AimuBot.Data;
 
 [SqliteTable("", ColumnConstraint = "unique ([name], [alias]) on conflict ignore")]
-class NameAliasRecord
+internal class NameAliasRecord
 {
     [SqliteColumn("name")] public string Name = "";
     [SqliteColumn("alias")] public string Alias = "";
@@ -9,71 +9,65 @@ class NameAliasRecord
 
 internal class NameAliasSystem
 {
-    private readonly SqliteDatabase database;
-    private readonly string table_name;
+    private readonly SqliteDatabase _database;
+    private readonly string _tableName;
 
     public NameAliasSystem(string tableName = "Common")
     {
-        database = new SqliteDatabase("NameAlias.db");
-        table_name = tableName;
+        _database = new SqliteDatabase("NameAlias.db");
+        _tableName = tableName;
         CreateTable();
     }
 
     public void CreateTable()
     {
-        string? sql = database.GetCreateTableSql(typeof(NameAliasRecord), table_name);
+        var sql = _database.GetCreateTableSql(typeof(NameAliasRecord), _tableName);
 
-        database.ExecuteNoneQuery(sql);
+        _database.ExecuteNoneQuery(sql);
     }
 
     public bool IsNameExist(string name)
     {
-        var (succ, _) = database.GetObject<NameAliasRecord>(
+        var (succ, _) = _database.GetObject<NameAliasRecord>(
             "name = $name",
-            new Dictionary<string, object>() { { "$name", name } },
-            table_name);
+            new Dictionary<string, object> { { "$name", name } },
+            _tableName);
         return succ;
     }
 
     public int SaveNameAlias(string name, string alias)
     {
-        NameAliasRecord r = new NameAliasRecord()
+        var r = new NameAliasRecord
         {
             Name = name,
-            Alias = alias,
+            Alias = alias
         };
-        return database.SaveObject(r, table_name);
+        return _database.SaveObject(r, _tableName);
     }
 
     public string TryGetNameByAlias(string alias)
     {
-        string? name = GetNameByAlias(alias);
+        var name = GetNameByAlias(alias);
         return name ?? alias;
     }
 
     public string? GetNameByAlias(string alias)
     {
-        var (succ, na) = database.GetObject<NameAliasRecord>(
+        var (succ, na) = _database.GetObject<NameAliasRecord>(
             "alias = $alias",
-            new Dictionary<string, object>() { { "$alias", alias } },
-            table_name);
+            new Dictionary<string, object> { { "$alias", alias } },
+            _tableName);
 
-        if (succ)
-            return na.Name;
-
-        return null;
+        return succ ? na.Name : null;
     }
 
     public string[]? GetAlias(string name)
     {
-        var objs = database.GetObjects<NameAliasRecord>(
+        var objs = _database.GetObjects<NameAliasRecord>(
             "name = $name",
-            new Dictionary<string, object>() { { "$name", name } },
-            table_name);
+            new Dictionary<string, object> { { "$name", name } },
+            _tableName);
 
-        if (objs is null)
-            return null;
-
-        return objs.Select(x => x.Alias).ToArray();
+        return objs is null ? null : objs.Select(x => x.Alias).ToArray();
     }
 }

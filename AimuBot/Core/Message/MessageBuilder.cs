@@ -10,20 +10,24 @@ public class MessageBuilder : IEnumerable
     private MessageChain _chain;
 
     public MessageBuilder()
-        => _chain = new();
+    {
+        _chain = new MessageChain();
+    }
 
     public MessageBuilder(params BaseChain[] chains)
-        => _chain = new(chains);
+    {
+        _chain = new MessageChain(chains);
+    }
 
     public MessageBuilder(IEnumerable<BaseChain> chains)
     {
-        _chain = new();
+        _chain = new MessageChain();
         _chain.AddRange(chains);
     }
 
     public MessageBuilder(string text)
     {
-        _chain = new();
+        _chain = new MessageChain();
         Text(text);
     }
 
@@ -33,17 +37,16 @@ public class MessageBuilder : IEnumerable
     public MessageChain Build()
     {
         TextChain last = null;
-        MessageChain? chain = new MessageChain();
+        var chain = new MessageChain();
 
         // Scan chains
         foreach (var i in _chain.Chains)
         {
             // If found a singleton chain
             if (i.Mode == BaseChain.ChainMode.Singleton)
-            {
+
                 // Then drop other chains
                 return new MessageChain(_chain[BaseChain.ChainMode.Singletag].FirstOrDefault(), i);
-            }
 
             // Combine text chains
             //////////////////////
@@ -75,9 +78,9 @@ public class MessageBuilder : IEnumerable
 
     public static MessageBuilder EvalKqCode(string kqCode)
     {
-        MessageBuilder? builder = new MessageBuilder();
+        var builder = new MessageBuilder();
         {
-            Regex? regexp = new Regex
+            var regexp = new Regex
                 (@"\[KQ:(at|image|flash|face|bface|record|video|reply|json|xml).*?\]");
 
             // Match pattern
@@ -85,47 +88,40 @@ public class MessageBuilder : IEnumerable
 
             if (matches.Count != 0)
             {
-                int textIndex = 0;
+                var textIndex = 0;
 
                 // Process each code
                 foreach (Match i in matches)
                 {
-                    if (i.Index != textIndex)
-                    {
-                        builder.Text(kqCode[textIndex..i.Index]);
-                    }
+                    if (i.Index != textIndex) builder.Text(kqCode[textIndex..i.Index]);
 
                     // Convert the code to a chain
                     BaseChain? chain = i.Groups[1].Value switch
                     {
-                        "at" => AtChain.ParseKqCode(i.Value),
+                        "at"    => AtChain.ParseKqCode(i.Value),
                         "image" => ImageChain.ParseKqCode(i.Value),
+
                         //"flash" => FlashImageChain.ParseKqCode(i.Value),
                         //"face" => QFaceChain.ParseKqCode(i.Value),
                         //"bface" => BFaceChain.ParseKqCode(i.Value),
                         //"record" => RecordChain.ParseKqCode(i.Value),
                         //"video" => VideoChain.ParseKqCode(i.Value),
                         "reply" => ReplyChain.ParseKqCode(i.Value),
+
                         //"json" => JsonChain.ParseKqCode(i.Value),
                         //"xml" => XmlChain.ParseKqCode(i.Value),
-                        _ => null,
+                        _ => null
                     };
 
                     // Add new chain
-                    if (chain != null)
-                    {
-                        builder.Add(chain);
-                    }
+                    if (chain != null) builder.Add(chain);
 
                     // Update index
                     textIndex = i.Index + i.Length;
                 }
 
                 // Process the suffix
-                if (textIndex != kqCode.Length)
-                {
-                    builder.Text(kqCode[textIndex..kqCode.Length]);
-                }
+                if (textIndex != kqCode.Length) builder.Text(kqCode[textIndex..kqCode.Length]);
             }
 
             // No code included
@@ -140,9 +136,9 @@ public class MessageBuilder : IEnumerable
 
     public static MessageBuilder EvalCsCode(string csCode)
     {
-        MessageBuilder? builder = new MessageBuilder();
+        var builder = new MessageBuilder();
         {
-            Regex? regexp = new Regex
+            var regexp = new Regex
                 (@"\[(cs|mirai):(at|image|reply):.*?\]");
 
             // Match pattern
@@ -150,47 +146,40 @@ public class MessageBuilder : IEnumerable
 
             if (matches.Count != 0)
             {
-                int textIndex = 0;
+                var textIndex = 0;
 
                 // Process each code
                 foreach (Match i in matches)
                 {
-                    if (i.Index != textIndex)
-                    {
-                        builder.Text(csCode[textIndex..i.Index]);
-                    }
+                    if (i.Index != textIndex) builder.Text(csCode[textIndex..i.Index]);
 
                     // Convert the code to a chain
                     BaseChain? chain = i.Groups[1].Value switch
                     {
-                        "at" => AtChain.ParseCsCode(i.Value),
+                        "at"    => AtChain.ParseCsCode(i.Value),
                         "image" => ImageChain.ParseCsCode(i.Value),
+
                         //"flash" => FlashImageChain.ParseKqCode(i.Value),
                         //"face" => QFaceChain.ParseKqCode(i.Value),
                         //"bface" => BFaceChain.ParseKqCode(i.Value),
                         //"record" => RecordChain.ParseKqCode(i.Value),
                         //"video" => VideoChain.ParseKqCode(i.Value),
                         "reply" => ReplyChain.ParseCsCode(i.Value),
+
                         //"json" => JsonChain.ParseKqCode(i.Value),
                         //"xml" => XmlChain.ParseKqCode(i.Value),
-                        _ => null,
+                        _ => null
                     };
 
                     // Add new chain
-                    if (chain != null)
-                    {
-                        builder.Add(chain);
-                    }
+                    if (chain != null) builder.Add(chain);
 
                     // Update index
                     textIndex = i.Index + i.Length;
                 }
 
                 // Process the suffix
-                if (textIndex != csCode.Length)
-                {
-                    builder.Text(csCode[textIndex..csCode.Length]);
-                }
+                if (textIndex != csCode.Length) builder.Text(csCode[textIndex..csCode.Length]);
             }
 
             // No code included
@@ -253,7 +242,7 @@ public class MessageBuilder : IEnumerable
 
     public static MessageBuilder operator +(MessageBuilder x, MessageBuilder y)
     {
-        MessageBuilder? z = new MessageBuilder();
+        var z = new MessageBuilder();
         {
             z._chain.AddRange(x._chain.Chains);
             z._chain.AddRange(y._chain.Chains);

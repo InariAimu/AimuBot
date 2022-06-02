@@ -15,7 +15,7 @@ public abstract class BaseChain
         BFace,
         Xml,
         MultiMsg,
-        Json,
+        Json
     }
 
     public enum ChainMode
@@ -24,6 +24,7 @@ public abstract class BaseChain
         Singleton,
         Singletag
     }
+
     public ChainType Type { get; protected set; }
 
     public ChainMode Mode { get; protected set; }
@@ -45,19 +46,19 @@ public abstract class BaseChain
     /// <returns></returns>
     internal static Dictionary<string, string> GetKqCodeArgs(string code)
     {
-        Dictionary<string, string>? kvpair = new Dictionary<string, string>();
+        var kvpair = new Dictionary<string, string>();
 
         // Split with a comma
         // [KQ:x,x=1,y=2] will becomes
         // "KQ:x" "x=1" "y=2"
-        string[]? split = code[..^1].Split(',');
+        var split = code[..^1].Split(',');
         {
             // Split every kvpair with an equal
             // "KQ:x" ignored
             // "x=1" will becomes "x" "1"
-            for (int i = 1; i < split.Length; ++i)
+            for (var i = 1; i < split.Length; ++i)
             {
-                string[]? eqpair = split[i].Split('=');
+                var eqpair = split[i].Split('=');
                 if (eqpair.Length < 2) continue;
                 {
                     kvpair.Add(eqpair[0],

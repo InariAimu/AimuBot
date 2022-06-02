@@ -5,7 +5,7 @@ namespace AimuBot.Core.Message.Model;
 public enum ImageChainType
 {
     Hash,
-    LocalFile,
+    LocalFile
 }
 
 public class ImageChain : BaseChain
@@ -37,8 +37,8 @@ public class ImageChain : BaseChain
         => ImageChainType switch
         {
             ImageChainType.LocalFile => $"[cs:image:{BotUtil.CombinePath(Content)}]",
-            ImageChainType.Hash => $"{Content}",
-            _ => Content
+            ImageChainType.Hash      => $"{Content}",
+            _                        => Content
         };
 
     public override string ToPreviewString()

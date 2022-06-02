@@ -31,5 +31,4 @@ public class BotLogger
 
     public static void LogV(string tag, object obj)
         => LogN($"V/{tag}", obj);
-
 }

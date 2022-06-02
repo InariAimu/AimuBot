@@ -1,5 +1,4 @@
-﻿
-using AimuBot.Data;
+﻿using AimuBot.Data;
 
 using Microsoft.Data.Sqlite;
 
@@ -9,14 +8,13 @@ namespace AimuBot.Modules.Arcaea;
 public class SongExtra
 {
     [SqliteColumn("song_id")] public string SongId = "";
-
     [SqliteColumn("song_diff")] public int Difficulty = 0;
 
     [SqliteColumn("rating")] public int Rating = 0;
 
     [SqliteColumn("notes")] public int Notes = 0;
 
-    //floor long arc skytao
+    //floor long arc skyTap
     [SqliteColumn("notes_f")] public int NotesF = 0;
     [SqliteColumn("notes_l")] public int NotesL = 0;
     [SqliteColumn("notes_a")] public int NotesA = 0;
@@ -26,54 +24,58 @@ public class SongExtra
 [SqliteTable("score")]
 public class ScoreDesc
 {
-    public string arc_id = "";
-    public string song_id = "";
-    public int type = 0;
-    public int diff = 0;
-    public int score = 0;
-    public double rating = 0;
-    public int clear_type = 0;
-    public int pure = 0;
-    public int good = 0;
-    public int far = 0;
-    public int lost = 0;
+    [SqliteColumn("arc_id")] public string ArcId = "";
+    [SqliteColumn("song_id")] public string SongId = "";
 
-    [SqliteColumn(Constraint = "unique on conflict replace default 0")]
+    [SqliteColumn("type")] public int Type = 0;
+    [SqliteColumn("diff")] public int Difficulty = 0;
+    [SqliteColumn("score")] public int Score = 0;
+    [SqliteColumn("rating")] public double Rating = 0;
+
+    [SqliteColumn("clear_type")] public int ClearType = 0;
+
+    [SqliteColumn("pure")] public int Pure = 0;
+    [SqliteColumn("good")] public int Good = 0;
+    [SqliteColumn("far")] public int Far = 0;
+    [SqliteColumn("lost")] public int Lost = 0;
+
+    [SqliteColumn("time", Constraint = "unique on conflict replace default 0")]
     public long time = 0;
 
-    public int early = 0;
-    public int late = 0;
-    public int early_p = 0;
-    public int late_p = 0;
+    [SqliteColumn("early")] public int Early = 0;
+    [SqliteColumn("late")] public int Late = 0;
+    [SqliteColumn("early_p")] public int EarlyPure = 0;
+    [SqliteColumn("late_p")] public int LatePure = 0;
 }
 
 [SqliteTable("bind_info")]
-class BindInfoDesc
+internal class BindInfoDesc
 {
-    [SqliteColumn(Constraint = "primary key on conflict replace")]
-    public long qq_id = 0;
+    [SqliteColumn("qq_id", Constraint = "primary key on conflict replace")]
+    public long QqId = 0;
 
-    [SqliteColumn(SqliteType = "integer")]
-    public string arc_id = "";
+    [SqliteColumn("arc_id", SqliteType = "integer")]
+    public string ArcId = "";
 
-    public string name = "";
-    public int bind_type = 0;
-    public int b30_type = 0;
-    public int recent_type = 0;
+    [SqliteColumn("name")] public string Name = "";
+
+    [SqliteColumn("bind_type")] public int BindType = 0;
+    [SqliteColumn("b30_type")] public int B30Type = 0;
+    [SqliteColumn("recent_type")] public int RecentType = 0;
 }
 
 [SqliteTable("ptt_history")]
-class PttHistoryDesc
+internal class PttHistoryDesc
 {
-    public string arc_id = "";
-    public int type = 0;
-    public double ptt = 0;
-    public double b30 = 0;
-    public double r10 = 0;
-    public double ptt_local = 0;
+    [SqliteColumn("arc_id")] public string ArcId = "";
+    [SqliteColumn("type")] public int Type = 0;
+    [SqliteColumn("ptt")] public double Ptt = 0;
+    [SqliteColumn("b30")] public double B30 = 0;
+    [SqliteColumn("r10")] public double R10 = 0;
+    [SqliteColumn("ptt_local")] public double PttLocal = 0;
 
-    [SqliteColumn(Constraint = "unique on conflict replace default 0")]
-    public long time = 0;
+    [SqliteColumn("time", Constraint = "unique on conflict replace default 0")]
+    public long Time = 0;
 }
 
 public class ArcaeaDatabase : SqliteDatabase
@@ -87,12 +89,12 @@ public class ArcaeaDatabase : SqliteDatabase
 
     public void SaveInt(long qqId, string key, int value)
     {
-        using SqliteConnection? connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
 
         var command = connection.CreateCommand();
         command.CommandText =
-        $@"
+            $@"
                     INSERT INTO bind_info
                     (qq_id, [{key}])
                     VALUES
@@ -103,7 +105,6 @@ public class ArcaeaDatabase : SqliteDatabase
         command.Parameters.AddWithValue("$id", qqId);
         command.Parameters.AddWithValue("$value", value);
 
-        int r = command.ExecuteNonQuery();
+        var r = command.ExecuteNonQuery();
     }
-
 }

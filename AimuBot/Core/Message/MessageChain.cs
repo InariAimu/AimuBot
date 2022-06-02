@@ -14,13 +14,19 @@ public class MessageChain : IEnumerable<BaseChain>
     public int Count => this.Count();
 
     internal MessageChain()
-        => Chains = new();
+    {
+        Chains = new List<BaseChain>();
+    }
 
     internal MessageChain(params BaseChain[] chain)
-        => Chains = new(chain.Where(i => i != null));
+    {
+        Chains = new List<BaseChain>(chain.Where(i => i != null));
+    }
 
     internal MessageChain(string text)
-        => Chains = new() { TextChain.Create(text) };
+    {
+        Chains = new List<BaseChain> { TextChain.Create(text) };
+    }
 
     public static implicit operator MessageChain(string value) => new(value);
 

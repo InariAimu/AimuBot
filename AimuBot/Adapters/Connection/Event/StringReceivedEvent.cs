@@ -2,7 +2,10 @@
 
 public class StringReceivedEvent : EventArgs
 {
-    public string Message { get; set; }
+    public StringReceivedEvent(string message)
+    {
+        Message = message;
+    }
 
-    public StringReceivedEvent(string message) => Message = message;
+    public string Message { get; }
 }

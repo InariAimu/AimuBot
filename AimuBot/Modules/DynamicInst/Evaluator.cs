@@ -4,43 +4,41 @@ using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.CodeAnalysis.Scripting.Hosting;
 using Microsoft.CodeAnalysis.Text;
 
-namespace AimuBot.Modules.DynamicInst
+namespace AimuBot.Modules.DynamicInst;
+// from: https://gist.github.com/TheSnowfield/2c52641d58e73ade1df2447c15f48683
+
+internal static class BlackInteractiveMagic
 {
-    // from: https://gist.github.com/TheSnowfield/2c52641d58e73ade1df2447c15f48683
+    private static readonly Type? CompilerType =
+        Type.GetType("Microsoft.CodeAnalysis.CSharp.Scripting.CSharpScriptCompiler, " +
+                     "Microsoft.CodeAnalysis.CSharp.Scripting");
 
-    static class BlackInteractiveMagic
+    private static readonly Type? ScriptBuilderType =
+        Type.GetType("Microsoft.CodeAnalysis.Scripting.ScriptBuilder, " +
+                     "Microsoft.CodeAnalysis.Scripting");
+
+    public static object? Compiler
+        => CompilerType!.GetField("Instance")!.GetValue(null);
+
+    public static Script<TType> CreateInitialScript<TType>(object compiler, SourceText sourceText,
+        ScriptOptions? optionsOpt, Type? globalsTypeOpt, InteractiveAssemblyLoader? assemblyLoaderOpt)
     {
-        private static readonly Type? CompilerType =
-            Type.GetType("Microsoft.CodeAnalysis.CSharp.Scripting.CSharpScriptCompiler, " +
-                         "Microsoft.CodeAnalysis.CSharp.Scripting");
+        // Create the script builder
+        var scriptBuilder = ScriptBuilderType?.GetConstructor(new[] { typeof(InteractiveAssemblyLoader) })
+            !.Invoke(new[] { assemblyLoaderOpt ?? new InteractiveAssemblyLoader(null) });
 
-        private static readonly Type? ScriptBuilderType =
-            Type.GetType("Microsoft.CodeAnalysis.Scripting.ScriptBuilder, " +
-                         "Microsoft.CodeAnalysis.Scripting");
-
-        public static object? Compiler
-            => CompilerType!.GetField("Instance")!.GetValue(null);
-
-        public static Script<TType> CreateInitialScript<TType>(object compiler, SourceText sourceText,
-            ScriptOptions? optionsOpt, Type? globalsTypeOpt, InteractiveAssemblyLoader? assemblyLoaderOpt)
+        // Create script instance
+        var scriptType = typeof(Script<>).MakeGenericType(typeof(TType));
+        var scriptConstr = scriptType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0];
+        var scriptInstance = scriptConstr.Invoke(new[]
         {
-            // Create the script builder
-            object? scriptBuilder = ScriptBuilderType?.GetConstructor(new[] { typeof(InteractiveAssemblyLoader) })
-                !.Invoke(new[] { assemblyLoaderOpt ?? new InteractiveAssemblyLoader(null) });
+            compiler,
+            scriptBuilder,
+            sourceText,
+            optionsOpt ?? ScriptOptions.Default,
+            globalsTypeOpt, null
+        });
 
-            // Create script instance
-            var scriptType = typeof(Script<>).MakeGenericType(typeof(TType));
-            var scriptConstr = scriptType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0];
-            object? scriptInstance = scriptConstr.Invoke(new[]
-            {
-                compiler,
-                scriptBuilder,
-                sourceText,
-                optionsOpt ?? ScriptOptions.Default,
-                globalsTypeOpt, null
-            });
-
-            return (Script<TType>)scriptInstance;
-        }
+        return (Script<TType>)scriptInstance;
     }
 }

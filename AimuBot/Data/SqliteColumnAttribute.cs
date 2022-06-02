@@ -8,5 +8,8 @@ public class SqliteColumnAttribute : Attribute
     public string DefaultValue = "";
     public string NameOverride = "";
 
-    public SqliteColumnAttribute(string name_override = "") => NameOverride = name_override;
+    public SqliteColumnAttribute(string nameOverride = "")
+    {
+        NameOverride = nameOverride;
+    }
 }

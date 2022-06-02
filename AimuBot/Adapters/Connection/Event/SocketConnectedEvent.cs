@@ -1,6 +1,5 @@
 ﻿namespace AimuBot.Adapters.Connection.Event;
 
-public class SocketConnetedEvent : EventArgs
+public class SocketConnectedEvent : EventArgs
 {
-
 }

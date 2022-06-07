@@ -100,13 +100,13 @@ public partial class Arcaea : ModuleBase
         return "";
     }
 
-    private bool GetB30ImageFile(Response r, string path, int version)
+    private bool GetB30ImageFile(Response r, string path, int version, int overflow = 0)
     {
         var im = version switch
         {
-            0 => GetB30_v2(r),
+            0 => GetB30_v2(r, overflow > 0),
             1 => GetB30_v1_Icon(r),
-            2 => GetB30_v2(r),
+            2 => GetB30_v2(r, overflow > 0),
             _ => null
         };
 
@@ -116,14 +116,16 @@ public partial class Arcaea : ModuleBase
         return true;
     }
 
-    private Image? GetB30_v2(Response r)
+    private Image? GetB30_v2(Response r, bool overflow = false)
     {
         var content = r.Content;
 
         if (content?.AccountInfo == null)
             return null;
 
-        LunaUI.LunaUI ui = new(Core.AimuBot.Config.ResourcePath, "Arcaea/ui/b30_v2.json");
+        var cardCount = overflow ? 39 : 30;
+        LunaUI.LunaUI ui = new(Core.AimuBot.Config.ResourcePath,
+            overflow ? "Arcaea/ui/b40_v2.json" : "Arcaea/ui/b30_v2.json");
 
         ui.GetNodeByPath<LuiText>("title/char_bg/name").Text = content.AccountInfo.Name;
 
@@ -172,13 +174,24 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("title/b30max").Text = " ";
         }
 
-
         var b30Table = ui.GetNodeByPath<LuiCloneTableLayout>("b30_table");
-        b30Table.CloneLayouts(30, "block_");
+        b30Table.CloneLayouts(cardCount, "block_");
 
-        for (var i = 0; i < content.Best30List.Count && i < 30; i++)
+        double minRating = 0;
+        
+        for (var i = 0; i < cardCount; i++)
         {
-            var playInfo = content.Best30List[i];
+            PlayRecord playInfo;
+            if (i < content.Best30List.Count)
+                playInfo = content.Best30List[i];
+            else if (i - content.Best30List.Count < content.Best30Overflow.Count)
+                playInfo = content.Best30Overflow[i - content.Best30List.Count];
+            else
+                break;
+
+            if (i == content.Best30List.Count - 1)
+                minRating = playInfo.Rating;
+            
             var songInfoRaw = _songInfoRaw[playInfo.SongId];
 
             ui.GetNodeByPath<LuiImage>($"b30_table/block_{i}/cover").ImagePath =
@@ -195,12 +208,21 @@ public partial class Arcaea : ModuleBase
                 playInfo.Score.ToString("D8").Insert(5, "\'").Insert(2, "\'");
 
             ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/idx").Text = $"#{i + 1}";
+            
+            if (playInfo.Score >= 10000000)
+                ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/rating").Color = Color.DarkCyan;
 
             var rating = GetRating(playInfo.SongId, playInfo.Difficulty);
             var ratingStr = "";
             if (rating > 0)
             {
                 ratingStr = rating.ToString("F1");
+
+                if (i >= content.Best30List.Count)
+                {
+                    if (rating + 2 <= minRating)
+                        ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/rating").Color = Color.Red;
+                }
             }
             else
             {
@@ -228,6 +250,21 @@ public partial class Arcaea : ModuleBase
                 _      => "now"
             };
             ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/date").Text = timeToNow;
+
+            if (ts.TotalMinutes < 1440 * 3)
+            {
+                ui.GetNodeByPath<LuiRect>($"b30_table/block_{i}/cover/new").Visible = true;
+                ui.GetNodeByPath<LuiRect>($"b30_table/block_{i}/cover/new").Color = ts.TotalMinutes switch
+                {
+                    < 180  => Color.Red,
+                    < 1440 => Color.LightCoral,
+                    _      => Color.Orange
+                };
+            }
+            else
+            {
+                ui.GetNodeByPath<LuiRect>($"b30_table/block_{i}/cover/new").Visible = false;
+            }
 
             var (_, diffColor) = playInfo.Difficulty switch
             {

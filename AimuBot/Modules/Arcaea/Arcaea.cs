@@ -185,11 +185,9 @@ public partial class Arcaea : ModuleBase
 
         var s = _songInfoRaw.Songs.SongList.Find(x => x.Id == name);
         if (s is null)
-            return $"未找到谱面：{name}";
+            return "";
 
         var d = s.Difficulties[diff];
-        if (d is null)
-            return $"未找到谱面：{name}";
 
         try
         {
@@ -236,7 +234,9 @@ public partial class Arcaea : ModuleBase
                 if (fi.Exists)
                     return new MessageBuilder(ImageChain.Create(path)).Build();
                 else
-                    return "[Aff2Preview] 未找到 Aff 文件或渲染出错。";
+                    BotLogger.LogE("ArcChart", "未找到 Aff 文件或渲染出错。");
+                    //return "[Aff2Preview] 未找到 Aff 文件或渲染出错。";
+                    return "";
             }
             else
             {
@@ -246,7 +246,8 @@ public partial class Arcaea : ModuleBase
         catch (Exception ex)
         {
             BotLogger.LogE("ArcChart", $"{ex.Message}\n{ex.StackTrace}");
-            return $"[Aff2Preview] 解析出错: {ex.Message}";
+            //return $"[Aff2Preview] 解析出错: {ex.Message}";
+            return "";
         }
     }
 }

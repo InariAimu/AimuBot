@@ -1,6 +1,8 @@
-﻿using AimuBot.Core.Extensions;
+﻿using AimuBot.Core.Bot;
+using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.ModuleMgr;
+using AimuBot.Core.Utils;
 
 namespace AimuBot.Modules;
 
@@ -15,8 +17,46 @@ internal class Test : ModuleBase
         SendType = SendType.Send)]
     public async Task<MessageChain> OnPing(BotMessage msg)
     {
-        await Task.Delay(1000);
-        return "Hello, I'm Kagami";
+        await Task.Delay(BotUtil.Random.Next(100, 1000));
+        var names = new[] { "Konata", "Kagami", "Tsukasa", "Miyuki" };
+        return "Hello, I'm " + names.Random();
+    }
+
+    [Command("test-net",
+        Name = "Test network connectivity",
+        Matching = Matching.Full,
+        Level = RbacLevel.Super,
+        SendType = SendType.Send)]
+    public MessageChain OnTestNet(BotMessage msg)
+    {
+        var urls = new[] { "https://www.google.com.hk", "https://github.com/InariAimu/AimuBot.git" };
+
+        var tasks = new List<Task>();
+        foreach (var url in urls)
+        {
+            tasks.Add(url.UrlDownload(false));
+            tasks.Add(url.UrlDownload(true));
+        }
+
+        var ret = "";
+
+        try
+        {
+            Task.WaitAll(tasks.ToArray());
+        }
+        catch (AggregateException ex)
+        {
+            foreach (var e in ex.InnerExceptions)
+            {
+                BotLogger.LogW(nameof(OnTestNet), ex.Message);
+            }
+        }
+        finally
+        {
+            ret = string.Join('\n', tasks.Select(t => $"t{t.Id}: {t.Status}"));
+        }
+
+        return ret;
     }
 
     public override bool OnGroupMessage(BotMessage msg)

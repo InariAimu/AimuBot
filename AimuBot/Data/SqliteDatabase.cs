@@ -71,6 +71,8 @@ public class SqliteDatabase
 
         var command = connection.CreateCommand();
         command.CommandText = sb.ToString();
+        
+        //BotLogger.LogI(MethodInfo.GetCurrentMethod().Name, command.CommandText);
 
         foreach (var t1 in members)
             command.Parameters.AddWithValue($"${t1.Name}", t1.GetValue(obj));
@@ -116,6 +118,8 @@ public class SqliteDatabase
         if (paramList != null)
             foreach (var (k, v) in paramList)
                 command.Parameters.AddWithValue(k, v);
+        
+        //BotLogger.LogI(MethodInfo.GetCurrentMethod().Name, command.CommandText);
 
         using var reader = command.ExecuteReader();
         var methods = typeof(SqliteDataReader).GetMethods().ToList();

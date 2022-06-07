@@ -127,14 +127,9 @@ public partial class Arcaea : ModuleBase
 
         var sr = _songInfoRaw.Songs.SongList.Find(x => x.Id == songName);
 
-        var (succ2, sd) = _db.GetObject<ScoreDesc>(
-            "song_id = $song_id and diff = $diff",
-            new Dictionary<string, object> { { "$song_id", songName }, { "$diff", difficulty } }
-        );
-
         if (sr != null && succ)
         {
-            var notes = sd.Pure + sd.Far + sd.Lost;
+            var notes = GetNotes(songName, difficulty);
 
             var response = new Response
             {

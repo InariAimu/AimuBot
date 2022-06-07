@@ -79,4 +79,13 @@ public partial class Arcaea : ModuleBase
 
         return JsonConvert.DeserializeObject<Response>(json);
     }
+
+    public async Task<Response?> GetB40ResponseFromAua(string userCode)
+    {
+        LogMessage("start b40 query: " + userCode);
+
+        var json = await GetFromBotArcApi($"user/best30?user={userCode}&overflow=9");
+
+        return JsonConvert.DeserializeObject<Response>(json);
+    }
 }

@@ -119,18 +119,23 @@ internal class Misc : ModuleBase
         if (s.IsNullOrEmpty())
             return "";
 
-        var tip = new[] { "那我建议你选择", "", "那就", "吧", "不如选", "", "为什么不", "呢" };
+        var tip = new[]
+        {
+            "那我建议你选择<option>",
+            "我觉得还是选<option>吧",
+            "不如选<option>",
+        };
 
-        var op = new Random().Next(0, tip.Length / 2) * 2;
+        var op = new Random().Next(0, tip.Length);
 
-        return tip[op] + s + tip[op + 1];
+        return tip[op].Replace("<option>", s);
     }
 
     [Command("https://github.com/",
         Name = "Github repo parser",
         Description = "Github repo parser",
-        Tip = "",
-        Example = "",
+        Tip = "Github repo url",
+        Example = "https://github.com/KonataDev/Konata.Core",
         Category = "杂项",
         Matching = Matching.StartsWithNoLeadChar,
         Level = RbacLevel.Normal,

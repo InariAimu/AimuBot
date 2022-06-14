@@ -72,6 +72,7 @@ internal class PttHistoryDesc
     [SqliteColumn("ptt")] public double Ptt = 0;
     [SqliteColumn("b30")] public double B30 = 0;
     [SqliteColumn("r10")] public double R10 = 0;
+    [SqliteColumn("b30_max")] public double MaxB30 = 0;
     [SqliteColumn("ptt_local")] public double PttLocal = 0;
 
     [SqliteColumn("time", Constraint = "unique on conflict replace default 0")]

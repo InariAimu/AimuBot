@@ -14,44 +14,13 @@ public class GdiImage : ImageDesc
             InnerImage = Image.FromFile(filePath);
     }
 
-    public override int GetHeight() => (InnerImage as Image)?.Height ?? 0;
-    public override int GetWidth() => (InnerImage as Image)?.Width ?? 0;
-
+    public override int GetHeight() => ((InnerImage as Image)?.Height) ?? 0;
+    public override int GetWidth() => ((InnerImage as Image)?.Width) ?? 0;
     public override void SaveToPng(string filePath)
     {
-        if (InnerImage is Image im) im.Save(filePath);
-    }
-
-    private static ImageCodecInfo? GetEncoder(ImageFormat format)
-    {
-        var codecs = ImageCodecInfo.GetImageDecoders();
-
-        foreach (var codec in codecs)
-            if (codec.FormatID == format.Guid)
-                return codec;
-        return null;
-    }
-
-    public override void SaveToJpg(string file, int quality = 100)
-    {
-        var im = InnerImage as Image;
-
-        var jpgEncoder = GetEncoder(ImageFormat.Jpeg);
-
-        if (jpgEncoder is null)
+        if (InnerImage is Image im)
         {
-            im.Save(file);
-        }
-        else
-        {
-            var myEncoder = Encoder.Quality;
-
-            var myEncoderParameters = new EncoderParameters(1);
-
-            myEncoderParameters.Param[0] = new EncoderParameter(myEncoder, quality);
-            ;
-
-            im.Save(file, jpgEncoder, myEncoderParameters);
+            im.Save(filePath);
         }
     }
 }
@@ -90,48 +59,42 @@ public class GdiPlusAdapter : GraphicsAdapter
 
     public override void DrawImage(ImageDesc image, float x, float y)
     {
-        var im = image.InnerImage as Image ?? Image.FromFile(image.FilePath);
+        var im = (image.InnerImage as Image) ?? Image.FromFile(image.FilePath);
         g.DrawImage(im, x, y);
     }
 
-    public override void DrawImageCliped(ImageDesc image, float x, float y, float clipx, float clipy, float clipw,
-        float cliph)
+    public override void DrawImageCliped(ImageDesc image, float x, float y, float clipx, float clipy, float clipw, float cliph)
     {
-        var im = image.InnerImage as Image ?? Image.FromFile(image.FilePath);
+        var im = (image.InnerImage as Image) ?? Image.FromFile(image.FilePath);
         g.DrawImage(im,
-            x, y,
-            RectangleF.FromLTRB(clipx, clipy, clipx + clipw, clipy + cliph), GraphicsUnit.Pixel);
+                   x, y,
+                   RectangleF.FromLTRB(clipx, clipy, clipx + clipw, clipy + cliph), GraphicsUnit.Pixel);
     }
 
-    public override void DrawImageClipedAndScaled(ImageDesc image, float x, float y, float w, float h, float clipx,
-        float clipy, float clipw, float cliph)
+    public override void DrawImageClipedAndScaled(ImageDesc image, float x, float y, float w, float h, float clipx, float clipy, float clipw, float cliph)
     {
-        var im = image.InnerImage as Image ?? Image.FromFile(image.FilePath);
+        var im = (image.InnerImage as Image) ?? Image.FromFile(image.FilePath);
         g.DrawImage(im,
-            RectangleF.FromLTRB(x, y, x + w, y + h),
-            RectangleF.FromLTRB(clipx, clipy, clipx + clipw, clipy + cliph), GraphicsUnit.Pixel);
+                   RectangleF.FromLTRB(x, y, x + w, y + h),
+                   RectangleF.FromLTRB(clipx, clipy, clipx + clipw, clipy + cliph), GraphicsUnit.Pixel);
     }
 
     public override void DrawImageScaled(ImageDesc image, float x, float y, float w, float h, float transparency)
     {
-        var im = image.InnerImage as Image;
+        var im = (image.InnerImage as Image);
         if (im == null)
         {
             if (image.FilePath == "")
                 return;
             im = Image.FromFile(image.FilePath);
         }
-
         if (transparency > 0)
         {
-            float[][] nArray =
-            {
-                new float[] { 1, 0, 0, 0, 0 },
-                new float[] { 0, 1, 0, 0, 0 },
-                new float[] { 0, 0, 1, 0, 0 },
-                new float[] { 0, 0, 0, Math.Clamp(transparency, 0, 1), 0 },
-                new float[] { 0, 0, 0, 0, 1 }
-            };
+            float[][] nArray ={ new float[] {1, 0, 0, 0, 0},
+                                new float[] {0, 1, 0, 0, 0},
+                                new float[] {0, 0, 1, 0, 0},
+                                new float[] {0, 0, 0, Math.Clamp(transparency, 0, 1), 0},
+                                new float[] {0, 0, 0, 0, 1}};
             ColorMatrix matrix = new(nArray);
             ImageAttributes attributes = new();
             attributes.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
@@ -139,11 +102,9 @@ public class GdiPlusAdapter : GraphicsAdapter
             g.DrawImage(im, rect, 0, 0, im.Width, im.Height, GraphicsUnit.Pixel, attributes);
         }
         else
-        {
             g.DrawImage(im,
-                RectangleF.FromLTRB(x, y, x + w, y + h),
-                RectangleF.FromLTRB(0, 0, im.Width, im.Height), GraphicsUnit.Pixel);
-        }
+                       RectangleF.FromLTRB(x, y, x + w, y + h),
+                       RectangleF.FromLTRB(0, 0, im.Width, im.Height), GraphicsUnit.Pixel);
     }
 
     public override void DrawLine(float width, float startx, float starty, float endx, float endy)
@@ -190,31 +151,30 @@ public class GdiPlusAdapter : GraphicsAdapter
 
     public override void SetFont(string name, float emSize)
     {
-        font = new Font(name, emSize, FontStyle.Regular);
+        font = new(name, emSize, FontStyle.Regular);
     }
 
     public override void SetFont(string name, float emSize, FontDescStyle style)
     {
-        font = new Font(name, emSize, ConvertStyle(style));
+        font = new(name, emSize, ConvertStyle(style));
     }
 
     public override void DrawStringLayout(string str, float x, float y, float w, float h, StringAdapterAlignment align)
     {
         var a = ConvertAlign(align);
-        var sf = new StringFormat()
+        StringFormat sf = new StringFormat()
         {
-            Alignment = a
+            Alignment = a,
         };
         g.DrawString(str, font, brush, RectangleF.FromLTRB(x, y, x + w, y + h), sf);
     }
 
-    public override void DrawStringLayoutLTRB(string str, float l, float t, float r, float b,
-        StringAdapterAlignment align)
+    public override void DrawStringLayoutLTRB(string str, float l, float t, float r, float b, StringAdapterAlignment align)
     {
         var a = ConvertAlign(align);
-        var sf = new StringFormat()
+        StringFormat sf = new StringFormat()
         {
-            Alignment = a
+            Alignment = a,
         };
         g.DrawString(str, font, brush, RectangleF.FromLTRB(l, t, r, b), sf);
     }

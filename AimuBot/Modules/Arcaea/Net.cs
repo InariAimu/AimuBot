@@ -39,7 +39,7 @@ public partial class Arcaea : ModuleBase
 
         LogMessage($"[Aua query] {request}");
 
-        var bytes = await (_auaUrl + request).UrlDownload(true, new Dictionary<string, string>
+        var bytes = await (_auaUrl + request).UrlDownload(false, new Dictionary<string, string>
         {
             { "User-Agent", _auaUA }
         });
@@ -87,5 +87,17 @@ public partial class Arcaea : ModuleBase
         var json = await GetFromBotArcApi($"user/best30?user={userCode}&overflow=9");
 
         return JsonConvert.DeserializeObject<Response>(json);
+    }
+
+    private async Task<PlayDataResponse?> GetPlayData(string songId, int difficulty, int startPtt, int endPtt)
+    {
+        var json = await GetFromBotArcApi(
+            $"playdata?songid={songId}&difficulty={difficulty}&start={startPtt}&end={endPtt}");
+
+        var r = JsonConvert.DeserializeObject<PlayDataResponse>(json);
+
+        LogMessage("[ArcPlaydata] ReturnCode:" + (r == null ? "ParseFail" : r.Status.ToString()));
+
+        return r;
     }
 }

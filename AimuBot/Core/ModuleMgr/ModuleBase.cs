@@ -111,24 +111,30 @@ public class ModuleBase
                     try
                     {
                         msg.Content = body;
-                        var result = cmd.InnerMethod?.Invoke(this, new object?[] { msg });
-                        var msgChain = result as MessageChain ?? (result as Task<MessageChain>)?.Result;
-                        var ret = msgChain?.ToCsCode();
-                        BotLogger.LogI(OnGetName(), ret);
-                        if (ret == "") return;
-                        switch (cmd.CommandInfo.SendType)
+                        if (cmd.CommandInfo.SendType == SendType.Custom)
                         {
-                            case SendType.Send:
-                                msg.Bot.SendGroupMessageSimple(msg.SubjectId, ret);
-                                break;
-                            case SendType.Reply:
-                                msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
+                            cmd.InnerMethod?.Invoke(this, new object?[] { msg });
                         }
-
-                        Information.MessageSent++;
+                        else
+                        {
+                            var result = cmd.InnerMethod?.Invoke(this, new object?[] { msg });
+                            var msgChain = result as MessageChain ?? (result as Task<MessageChain>)?.Result;
+                            var ret = msgChain?.ToCsCode();
+                            BotLogger.LogI(OnGetName(), ret);
+                            if (ret == "") return;
+                            switch (cmd.CommandInfo.SendType)
+                            {
+                                case SendType.Send:
+                                    msg.Bot.SendGroupMessageSimple(msg.SubjectId, ret);
+                                    break;
+                                case SendType.Reply:
+                                    msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+                            Information.MessageSent++;
+                        }
                     }
                     catch (TargetInvocationException ex)
                     {
@@ -149,16 +155,14 @@ public class ModuleBase
                 });
                 return true;
             }
-            else
-            {
-                LogMessage(
-                    $"[{msg.SubjectName}][{msg.SenderName}] 权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
-                if (userLevel != RbacLevel.RestrictedUser)
-                    msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id,
-                        $"权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
 
-                return false;
-            }
+            
+            LogMessage($"[{msg.SubjectName}][{msg.SenderName}] 权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
+            /*if (userLevel != RbacLevel.RestrictedUser)
+                msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id,
+                    $"权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
+*/
+            return false;
         }
 
         return false;

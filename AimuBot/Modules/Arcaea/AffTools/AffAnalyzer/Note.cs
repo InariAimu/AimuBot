@@ -1,4 +1,4 @@
-﻿namespace AimuBot.Modules.Arcaea.AffTools.AffAnalyzer;
+﻿namespace AffTools.AffAnalyzer;
 
 internal struct NoteRaw
 {
@@ -22,6 +22,15 @@ internal class Note
     public bool hasDot = false;
     public bool isTriplet = false;
 
+    public float InvDuration
+    {
+        get
+        {
+            if (Duration == 0) return 0;
+            return 1000 / Duration;
+        }
+    }
+
     private static bool isDoubleEqual(double a, double b, double e) => Math.Abs(a - b) <= e;
 
     public Note(int timeing, int length, double bpm)
@@ -37,6 +46,7 @@ internal class Note
     {
         var threshold = 3.5;
 
+        Duration = length;
         TimePoint = timing;
         var time_full_note = 60 * 1000 * 4 / bpm;
         if (length > time_full_note)

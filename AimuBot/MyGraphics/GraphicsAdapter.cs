@@ -38,6 +38,12 @@ public class ColorDesc
         color.SetColor(argb);
         return color;
     }
+    public static ColorDesc FromArgb(byte a, byte r, byte g, byte b)
+    {
+        ColorDesc color = new();
+        color.SetColor(a,r,g,b);
+        return color;
+    }
 }
 
 public enum FontDescStyle
@@ -53,7 +59,7 @@ public enum StringAdapterAlignment
 {
     Near = 0,
     Center = 1,
-    Far = 2
+    Far = 2,
 }
 
 public class FontDesc
@@ -64,9 +70,7 @@ public class FontDesc
     public float EmSize { get; set; } = 0;
     public FontDescStyle Style { get; set; } = FontDescStyle.Regular;
 
-    public FontDesc()
-    {
-    }
+    public FontDesc() { }
 
     public FontDesc(string name, float emSize, FontDescStyle style)
     {
@@ -84,14 +88,13 @@ public abstract class ImageDesc
     public abstract int GetWidth();
     public abstract int GetHeight();
     public abstract void SaveToPng(string filePath);
-    public abstract void SaveToJpg(string file, int quality = 100);
 }
 
 public enum Alignment
 {
     Near,
     Center,
-    Far
+    Far,
 }
 
 public abstract class GraphicsAdapter
@@ -103,23 +106,14 @@ public abstract class GraphicsAdapter
     public abstract void SetFont(string name, float emSize, FontDescStyle style);
     public abstract void Fill(ColorDesc color);
     public abstract void DrawImage(ImageDesc image, float x, float y);
-
-    public abstract void DrawImageScaled(ImageDesc image, float x, float y, float width, float height,
-        float transparency = 0);
-
-    public abstract void DrawImageCliped(ImageDesc image, float x, float y, float clipx, float clipy, float clipw,
-        float cliph);
-
-    public abstract void DrawImageClipedAndScaled(ImageDesc image, float x, float y, float width, float height,
-        float clipx, float clipy, float clipw, float cliph);
-
+    public abstract void DrawImageScaled(ImageDesc image, float x, float y, float width, float height, float transparency = 0);
+    public abstract void DrawImageCliped(ImageDesc image, float x, float y, float clipx, float clipy, float clipw, float cliph);
+    public abstract void DrawImageClipedAndScaled(ImageDesc image, float x, float y, float width, float height, float clipx, float clipy, float clipw, float cliph);
     public abstract void FillRectangle(ColorDesc color, float x, float y, float w, float h);
     public abstract void DrawLine(ColorDesc color, float width, float startx, float starty, float endx, float endy);
     public abstract void DrawLine(float width, float startx, float starty, float endx, float endy);
     public abstract void DrawString(string str, ColorDesc color, FontDesc font, float x, float y);
     public abstract void DrawString(string str, float x, float y);
     public abstract void DrawStringLayout(string str, float x, float y, float w, float h, StringAdapterAlignment align);
-
-    public abstract void DrawStringLayoutLTRB(string str, float l, float t, float r, float b,
-        StringAdapterAlignment align);
+    public abstract void DrawStringLayoutLTRB(string str, float l, float t, float r, float b, StringAdapterAlignment align);
 }

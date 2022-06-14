@@ -76,12 +76,17 @@ public partial class Arcaea : ModuleBase
 
         foreach (var playRecord in response.Content.Best30List) UpdatePlayerScoreRecord(accountInfo, playRecord);
 
+        double maxR10 = 0;
+        for (var i = 0; i < response.Content.Best30List.Count && i < 10; i++) maxR10 += response.Content.Best30List[i].Rating;
+        var maxPtt = (response.Content.Best30Avg * 30 + maxR10) / 40;
+
         PttHistoryDesc pttHistoryDesc = new()
         {
             ArcId = accountInfo.Code,
             Ptt = accountInfo.RealRating,
             B30 = response.Content.Best30Avg,
             R10 = response.Content.Recent10Avg,
+            MaxB30 = maxPtt,
             Time = (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalMilliseconds,
             Type = 0
         };
@@ -159,20 +164,13 @@ public partial class Arcaea : ModuleBase
         ui.GetNodeByPath<LuiImage>("title/char_bg/char").ImagePath =
             $"Arcaea/assets/char/{content.AccountInfo.Character}{sn}_icon.png";
 
-
         ui.GetNodeByPath<LuiText>("title/b30").Text = $"Best30 {content.Best30Avg:F3}";
-        ui.GetNodeByPath<LuiText>("title/r10").Text = $"Recent10 {content.Recent10Avg:F3}";
-        if (content.AccountInfo.Rating >= 0)
-        {
-            double maxR10 = 0;
-            for (var i = 0; i < content.Best30List.Count && i < 10; i++) maxR10 += content.Best30List[i].Rating;
-            var maxPtt = (content.Best30Avg * 30 + maxR10) / 40;
-            ui.GetNodeByPath<LuiText>("title/b30max").Text = $"MaxPtt {maxPtt:F3}";
-        }
-        else
-        {
-            ui.GetNodeByPath<LuiText>("title/b30max").Text = " ";
-        }
+        double maxR10 = 0;
+        for (var i = 0; i < content.Best30List.Count && i < 10; i++) maxR10 += content.Best30List[i].Rating;
+        var maxPtt = (content.Best30Avg * 30 + maxR10) / 40;
+        ui.GetNodeByPath<LuiText>("title/b30max").Text = $"MaxPtt {maxPtt:F3}";
+        
+        ui.GetNodeByPath<LuiText>("title/r10").Text = content.AccountInfo.Rating >= 0 ? $"Recent10 {content.Recent10Avg:F3}" : " ";
 
         var b30Table = ui.GetNodeByPath<LuiCloneTableLayout>("b30_table");
         b30Table.CloneLayouts(cardCount, "block_");

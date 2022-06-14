@@ -9,6 +9,7 @@ using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
+using AimuBot.Modules.Arcaea.AuaJson;
 
 using LunaUI.Layouts;
 
@@ -72,6 +73,12 @@ internal class Misc : ModuleBase
     {
         var content = msg.Content;
 
+        if (content.Length > 256)
+            return "";
+        
+        if (new Regex(@"^\s+$").IsMatch(content))
+            return "";
+        
         if (BotUtil.Timestamp < _guyLock + 15 * 1000)
             return "";
 
@@ -90,12 +97,14 @@ internal class Misc : ModuleBase
         using (var g = Graphics.FromImage(im))
         {
             Font f = new("微软雅黑", 40, FontStyle.Regular, GraphicsUnit.Pixel);
-            var sf = g.MeasureString(content, f);
-            var w = sf.Width > 380 ? ui.Root.Root.Size.Width + sf.Width - 380 : ui.Root.Root.Size.Width;
-            ui.Root.Root.Size = new Size((int)w, ui.Root.Root.Size.Height);
-            ui.GetNodeByPath<LuiColorLayer>("ColorLayer").Size = ui.Root.Root.Size with { Width = (int)w };
+            var sf = g.MeasureString(content, f, 1200);
+            var w = sf.Width > 380 ? ui.Root.Root.Size.Width + sf.Width - 380 + 20 : ui.Root.Root.Size.Width;
+            var h = sf.Height > 55 ? ui.Root.Root.Size.Width + sf.Height - 380 : ui.Root.Root.Size.Height;
+            ui.Root.Root.Size = new Size((int)w, (int)h);
+            ui.GetNodeByPath<LuiColorLayer>("ColorLayer").Size =
+                ui.Root.Root.Size with { Width = (int)w, Height = (int)h };
 
-            ui.GetNodeByPath<LuiText>("Text1").Size = new Size((int)sf.Width + 50, 55);
+            ui.GetNodeByPath<LuiText>("Text1").Size = new Size((int)sf.Width + 50, (int)sf.Height);
         }
 
         ui.Render().SaveToJpg(BotUtil.CombinePath("Generate/Guy_gen.jpg"), 85);

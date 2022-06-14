@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace AimuBot.Modules.Arcaea.AffTools.AffReader
+namespace AffTools.AffReader
 {
     public enum ArcLineType
     {
@@ -88,19 +88,21 @@ namespace AimuBot.Modules.Arcaea.AffTools.AffReader
 
         public bool NoInput;
 
+        public bool HasHead = true;
+
         public static ArcLineType ToArcLineType(string type)
         {
             return type switch
             {
-                "b"    => ArcLineType.B,
-                "s"    => ArcLineType.S,
-                "si"   => ArcLineType.Si,
-                "so"   => ArcLineType.So,
+                "b" => ArcLineType.B,
+                "s" => ArcLineType.S,
+                "si" => ArcLineType.Si,
+                "so" => ArcLineType.So,
                 "sisi" => ArcLineType.SiSi,
                 "siso" => ArcLineType.SiSo,
                 "sosi" => ArcLineType.SoSi,
                 "soso" => ArcLineType.SoSo,
-                _      => ArcLineType.S
+                _ => ArcLineType.S
             };
         }
     }

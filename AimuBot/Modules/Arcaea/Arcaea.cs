@@ -1,11 +1,16 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Drawing;
+using System.Text.RegularExpressions;
+
+using AffTools.Aff2Preview;
 
 using AimuBot.Core.Bot;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
-using AimuBot.Modules.Arcaea.AffTools.Aff2Preview;
+using AimuBot.Core.Extensions;
+
+using AffTools.Aff2Preview;
 
 namespace AimuBot.Modules.Arcaea;
 
@@ -206,7 +211,8 @@ public partial class Arcaea : ModuleBase
                     Side = s.Side,
                     Difficulty = diff,
                     Rating = GetRating(name, diff),
-                    Notes = GetNotes(name, diff)
+                    Notes = GetNotes(name, diff),
+                    IsMirror = false,
                 };
 
                 var bg = $"arcaea/assets/img/bg/{s.GetBg(diff)}.jpg";
@@ -227,7 +233,7 @@ public partial class Arcaea : ModuleBase
                         BotUtil.CombinePath(bg),
                         BotUtil.CombinePath(s.GetCover(diff)));
 
-                r.Draw()?.SaveToJpg(BotUtil.CombinePath(path), 95);
+                (r.Draw()?.InnerImage as Image)?.SaveToJpg(BotUtil.CombinePath(path), 95);
 
                 fi = new FileInfo(BotUtil.CombinePath(path));
 

@@ -99,7 +99,7 @@ internal class Misc : ModuleBase
             Font f = new("微软雅黑", 40, FontStyle.Regular, GraphicsUnit.Pixel);
             var sf = g.MeasureString(content, f, 1200);
             var w = sf.Width > 380 ? ui.Root.Root.Size.Width + sf.Width - 380 + 20 : ui.Root.Root.Size.Width;
-            var h = sf.Height > 55 ? ui.Root.Root.Size.Width + sf.Height - 380 : ui.Root.Root.Size.Height;
+            var h = sf.Height > 55 ? ui.Root.Root.Size.Width + sf.Height - 480 : ui.Root.Root.Size.Height;
             ui.Root.Root.Size = new Size((int)w, (int)h);
             ui.GetNodeByPath<LuiColorLayer>("ColorLayer").Size =
                 ui.Root.Root.Size with { Width = (int)w, Height = (int)h };
@@ -156,7 +156,7 @@ internal class Misc : ModuleBase
         {
             LogMessage(msg.Body);
 
-            var bytes = await $"{msg.Body.TrimEnd('/')}.git".UrlDownload();
+            var bytes = await $"{msg.Body.TrimEnd('/')}.git".UrlDownload(true);
 
             var html = Encoding.UTF8.GetString(bytes);
 

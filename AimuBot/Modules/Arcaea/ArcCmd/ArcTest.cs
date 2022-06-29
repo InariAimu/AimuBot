@@ -23,10 +23,11 @@ public partial class Arcaea : ModuleBase
         SendType = SendType.Send)]
     public MessageChain OnArcTest(BotMessage msg)
     {
+        var songId = "ifi";
         Task.Run(async () =>
         {
-            await GetSongDist("take", 2);
-            await msg.Bot.SendGroupMessageImage(msg.SubjectId, BotUtil.CombinePath("Arcaea/stst.jpg"));
+            await GetSongDist(songId, 2);
+            await msg.Bot.SendGroupMessageImage(msg.SubjectId, BotUtil.CombinePath($"Arcaea/songstat/{songId}.jpg"));
         });
         return "";
     }
@@ -116,7 +117,7 @@ public partial class Arcaea : ModuleBase
         b.Color = Color.Black;
         g.DrawString($"{songId} {difficulty}", f, b, 100, 40 - 22);
 
-        im.SaveToJpg(BotUtil.CombinePath($"Arcaea/stst.jpg"), 100);
+        im.SaveToJpg(BotUtil.CombinePath($"Arcaea/songstat/{songId}.jpg"), 100);
     }
 
     private string GetAllSongInfoFromAua()

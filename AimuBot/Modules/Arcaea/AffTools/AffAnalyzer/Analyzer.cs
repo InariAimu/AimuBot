@@ -165,7 +165,7 @@ internal class Analyzer
         unit /= tpdf;
         float cf = d / unit;
         var ci = (int)cf;
-        return ci <= 1 ? 1 : hasHead ? ci - 1 : ci;
+        return ci <= 1 ? 1 : (hasHead ? ci - 1 : ci);
     }
 
     public int GetCombo(int timing)
@@ -255,7 +255,7 @@ internal class Analyzer
                     var t = CalcSingleHold(evHold.Timing, evHold.EndTiming, true, timing.Bpm, _affReader.TimingPointDensityFactor);
                     for (var tx = 0; tx < t; tx++)
                     {
-                        timingNotePoints.Add(evHold.Timing + (evHold.EndTiming - evHold.Timing) * tx / t);
+                        timingNotePoints.Add(evHold.Timing + (int)((evHold.EndTiming - evHold.Timing) * (tx + 0.5f) / t));
                     }
                     Hold += t;
                     Total += t;
@@ -279,7 +279,7 @@ internal class Analyzer
                     var t = CalcSingleHold(evArc.Timing, evArc.EndTiming, evArc.HasHead, timing.Bpm, _affReader.TimingPointDensityFactor);
                     for (var tx = 0; tx < t; tx++)
                     {
-                        timingNotePoints.Add(evArc.Timing + (evArc.EndTiming - evArc.Timing) * tx / t);
+                        timingNotePoints.Add(evArc.Timing + (int)((evArc.EndTiming - evArc.Timing) * (tx + 0.5f) / t));
                     }
                     Arc[evArc.Color] += t;
                     Total += t;

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Net.WebSockets;
+using System.Reflection;
 
 using AimuBot.Core.Bot;
 using AimuBot.Core.Extensions;

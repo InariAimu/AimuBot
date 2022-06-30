@@ -4,10 +4,18 @@ using AimuBot.Core.Message;
 
 namespace AimuBot.Adapters;
 
+public enum BotAdapterStatus
+{
+    Connected,
+    Disconnected,
+}
+
 public abstract class BotAdapter
 {
     public string Name { get; set; } = "Bot";
     public string Protocol { get; set; } = "None";
+
+    public BotAdapterStatus Status { get; set; } = BotAdapterStatus.Disconnected;
 
     public event EventDispatcher.BotEvent<MessageEvent>? OnMessageReceived;
 

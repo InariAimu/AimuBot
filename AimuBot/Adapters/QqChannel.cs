@@ -10,8 +10,6 @@ internal class QqChannel : BotAdapter
         Protocol = "CSCode";
     }
 
-    public AsyncSocket AsyncSocket { get; init; } = new();
-
     public override Task ReplyGroupMessageImage(long uin, int msgId, string imgPath) =>
         throw new NotImplementedException();
 

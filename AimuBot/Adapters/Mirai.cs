@@ -1,5 +1,6 @@
 ﻿using AimuBot.Adapters.Connection;
 using AimuBot.Adapters.Connection.Event;
+using AimuBot.Core.Extensions;
 using AimuBot.Core.Utils;
 
 namespace AimuBot.Adapters;
@@ -12,28 +13,31 @@ public class Mirai : BotAdapter
         Protocol = "CSCode";
     }
 
-    private AsyncSocket AsyncSocket { get; } = new();
+    public StringOverSocket StringOverSocket { get; set; }
 
-    public async void WaitForConnection()
+    public async void StartReceiveMessage()
     {
-        AsyncSocket.OnConnected += AsyncSocket_OnConnected;
-        AsyncSocket.OnStringReceived += AsyncSocket_OnStringReceived;
-        await AsyncSocket.WaitConnection();
+        while (true)
+        {
+            var s = await StringOverSocket.Receive();
+            if (s.IsNullOrEmpty())
+            {
+                BotLogger.LogW($"{Name}", "Disconnected");
+                StringOverSocket._workSocket.Dispose();
+                return;
+            }
+
+            RaiseMessageEvent(s);
+        }
     }
-
-    private async void AsyncSocket_OnConnected(FuturedSocket sender, SocketConnectedEvent args)
-        => await AsyncSocket.Receive();
-
-    private void AsyncSocket_OnStringReceived(FuturedSocket sender, StringReceivedEvent args)
-        => RaiseMessageEvent(args.Message);
 
     public override async Task SendRawMessage(string message)
     {
-        if (AsyncSocket.Connected && Core.AimuBot.Config.EnableSendMessage)
+        if (StringOverSocket._workSocket.Connected && Core.AimuBot.Config.EnableSendMessage)
         {
             BotLogger.LogV("Bot", message);
 
-            await AsyncSocket.SendString(message);
+            await StringOverSocket.Send(message);
 
             //Information.MessageSent++;
         }

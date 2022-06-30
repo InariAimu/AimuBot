@@ -1,4 +1,7 @@
-﻿using AimuBot.Adapters;
+﻿using System.Net.Sockets;
+
+using AimuBot.Adapters;
+using AimuBot.Adapters.Connection;
 using AimuBot.Core.Bot;
 using AimuBot.Core.Events;
 using AimuBot.Core.Utils;
@@ -12,7 +15,7 @@ public class AimuBot
     public static readonly BotConfig Config
         = JsonConvert.DeserializeObject<BotConfig>(File.ReadAllText(BotConfig.ConfigFileName))!;
 
-    private readonly List<BotAdapter> _bots = new();
+    private readonly List<BotAdapter> _botAdapters = new();
 
     private readonly EventDispatcher _dispatcher = new();
 
@@ -32,18 +35,49 @@ public class AimuBot
         ModuleMgr.Bot = this;
         ModuleMgr.Init();
 
-        var miraiBot = new Mirai();
-        miraiBot.OnMessageReceived += Bot_OnMessageReceived;
-        _bots.Add(miraiBot);
+        FuturedSocket futuredSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-        miraiBot.WaitForConnection();
+        var index = 0;
+        while (true)
+        {
+            Console.WriteLine("Begin Accept");
+            var fs = await futuredSocket.Accept("127.0.0.1", 10616, 4);
+            Console.WriteLine($"Accepted {fs.InnerSocket.RemoteEndPoint}");
 
-        await Task.Delay(-1);
+            var sc = new StringOverSocket(fs);
+
+            var pc = await sc.Receive();
+            Console.WriteLine(pc);
+            var initMsg = JsonConvert.DeserializeObject<SocketMessage>(pc);
+
+            switch (initMsg.BotAdapter.ToLower())
+            {
+                case "mirai":
+                {
+                    var adapter = new Mirai()
+                    {
+                        StringOverSocket = sc,
+                        Name = $"mirai-{index}"
+                    };
+                    adapter.OnMessageReceived += Bot_OnMessageReceived;
+                    _botAdapters.Add(adapter);
+
+                    Task.Run(adapter.StartReceiveMessage);
+
+                    index++;
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+        }
     }
 
     private void Bot_OnMessageReceived(BotAdapter sender, MessageEvent args)
     {
-        BotLogger.LogV("Bot", args.Message);
+        BotLogger.LogV($"Bot [{sender.Name}]", args.Message);
         _dispatcher.RaiseEvent(sender, args);
     }
 

@@ -4,8 +4,6 @@ namespace AimuBot.Adapters;
 
 internal class Konata : BotAdapter
 {
-    public AsyncSocket AsyncSocket { get; init; } = new();
-
     public Konata()
     {
         Name = "Konata";

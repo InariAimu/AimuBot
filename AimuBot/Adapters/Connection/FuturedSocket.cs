@@ -2,186 +2,245 @@
 using System.Net.Sockets;
 using System.Text;
 
-namespace AimuBot.Adapters.Connection;
+// ReSharper disable IdentifierTypo
+// ReSharper disable UnusedMember.Global
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable ArrangeObjectCreationWhenTypeNotEvident
+// ReSharper disable SuggestBaseTypeForParameter
+// ReSharper disable UnusedType.Global
 
-// From https://github.com/KonataDev/Konata.Core under GNU GPLv3
+// From: https://github.com/NekoRushX/NekoRush.FuturedSocket under MIT license
+
+namespace AimuBot.Adapters.Connection;
 
 public class FuturedSocket : IDisposable
 {
-    public FuturedSocket(Socket socket)
-    {
-        InnerSocket = socket;
-    }
-
-    public FuturedSocket(AddressFamily family, SocketType type, ProtocolType protocol)
-    {
-        InnerSocket = new Socket(family, type, protocol);
-    }
-
     /// <summary>
-    ///     Inner socket
+    /// Inner socket
     /// </summary>
     public Socket InnerSocket { get; }
 
     /// <summary>
-    ///     Is Connected
+    /// Is connected
     /// </summary>
     public bool Connected
         => InnerSocket.Connected;
+
+    /// <summary>
+    /// Creates a new instance of <see cref="FuturedSocket"/>
+    /// </summary>
+    /// <param name="family">Address family</param>
+    /// <param name="type">Socket type</param>
+    /// <param name="protocol">Protocol type</param>
+    public FuturedSocket(AddressFamily family, SocketType type, ProtocolType protocol)
+        => InnerSocket = new(family, type, protocol);
+
+    /// <summary>
+    /// Create a new instance from legacy <see cref="Socket"/>
+    /// </summary>
+    /// <param name="socket">Socket</param>
+    public FuturedSocket(Socket socket)
+        => InnerSocket = socket;
 
     public void Dispose()
         => InnerSocket?.Dispose();
 
     /// <summary>
-    ///     Turn socket into listen mode and accepts the connections from client
+    /// Connect to server
     /// </summary>
-    /// <param name="ep"></param>
-    /// <param name="timeout"></param>
-    /// <returns></returns>
-    public async Task<FuturedSocket?> Accept(IPEndPoint ep, int timeout = -1)
+    /// <param name="ep">Destination endpoint</param>
+    /// <param name="timeout">Connect timeout, -1 for wait infinity</param>
+    /// <returns>If connected successfully, return True. Otherwise False.</returns>
+    public Task<bool> Connect(IPEndPoint ep, int timeout = -1)
+    {
+        PrepareTask<bool>(timeout, out var tk, out var args);
+        {
+            args.UserToken = tk;
+            args.RemoteEndPoint = ep;
+            args.Completed += (_, o) =>
+            {
+                tk.TrySetResult(InnerSocket.Connected);
+                o.Dispose();
+            };
+
+            // Connect async
+            return InnerSocket.ConnectAsync(args)
+                ? tk.Task
+                : Task.FromResult(InnerSocket.Connected);
+        }
+    }
+
+    /// <summary>
+    /// Turn socket into listen mode and waiting for a client connection
+    /// </summary>
+    /// <param name="ep">Listening endpoint</param>
+    /// <param name="maxconn">Max connections</param>
+    /// <param name="timeout">Accept timeout, -1 for wait infinity</param>
+    /// <returns>If accepts a client, return a connected <see cref="FuturedSocket"/> instance.</returns>
+    public Task<FuturedSocket> Accept(IPEndPoint ep, int maxconn, int timeout = -1)
     {
         if (!InnerSocket.IsBound)
         {
             InnerSocket.Bind(ep);
-            InnerSocket.Listen();
+            InnerSocket.Listen(maxconn);
         }
 
-        EnterAsync(out var tk, out var args);
+        PrepareTask<FuturedSocket>(timeout, out var tk, out var args);
         {
             args.UserToken = tk;
             args.RemoteEndPoint = ep;
-            args.Completed += OnCompleted;
-
-            // Accept async
-            if (InnerSocket.AcceptAsync(args))
-                await Task.Run(() => tk.WaitOne(timeout));
+            args.Completed += (_, o) =>
+            {
+                tk.TrySetResult(o.AcceptSocket is not { Connected: true }
+                    ? null
+                    : new FuturedSocket(o.AcceptSocket));
+                o.Dispose();
+            };
         }
-        LeaveAsync(tk, args);
 
-        if (args.AcceptSocket is not { Connected: true }) return null;
-        return new FuturedSocket(args.AcceptSocket);
+        // Accept async
+        return InnerSocket.AcceptAsync(args)
+            ? tk.Task
+            : Task.FromResult(
+                args.AcceptSocket is not { Connected: true }
+                    ? null
+                    : new FuturedSocket(args.AcceptSocket)
+            );
     }
 
     /// <summary>
-    ///     Connect to server
+    /// Disconnect from server
     /// </summary>
-    /// <param name="ep"></param>
-    /// <param name="timeout"></param>
-    /// <returns></returns>
-    public async Task<bool> Connect(IPEndPoint ep, int timeout = -1)
+    /// <param name="timeout">Disconnect timeout, -1 for wait infinity</param>
+    /// <returns>Return socket currently connect status after invoked disconnect function. If disconnected return True.</returns>
+    public Task<bool> Disconnect(int timeout = -1)
     {
-        EnterAsync(out var tk, out var args);
+        PrepareTask<bool>(timeout, out var tk, out var args);
         {
             args.UserToken = tk;
-            args.RemoteEndPoint = ep;
-            args.Completed += OnCompleted;
-
-            // Connect async
-            if (InnerSocket.ConnectAsync(args))
-                await Task.Run(() => tk.WaitOne(timeout));
+            args.Completed += (_, o) =>
+            {
+                tk.TrySetResult(InnerSocket.Connected == false);
+                o.Dispose();
+            };
         }
-        LeaveAsync(tk, args);
 
-        return InnerSocket.Connected;
+        // Disconnect async
+        return InnerSocket.DisconnectAsync(args)
+            ? tk.Task
+            : Task.FromResult(InnerSocket.Connected == false);
     }
 
     /// <summary>
-    ///     Disconnect from server
+    /// Send data
     /// </summary>
-    /// <param name="timeout"></param>
-    /// <returns></returns>
-    public async Task<bool> Disconnect(int timeout = -1)
+    /// <param name="data">The data to send</param>
+    /// <param name="timeout">Send timeout, -1 for wait infinity</param>
+    /// <returns>Bytes transferred in <see cref="int"/> value</returns>
+    public Task<int> Send(byte[] data, int timeout = -1)
     {
-        EnterAsync(out var tk, out var args);
+        PrepareTask<int>(timeout, out var tk, out var args);
         {
             args.UserToken = tk;
-            args.Completed += OnCompleted;
-
-            // Disconnect async
-            if (InnerSocket.DisconnectAsync(args))
-                await Task.Run(() => tk.WaitOne(timeout));
+            args.SetBuffer(data, 0, data.Length);
+            args.Completed += (_, o) =>
+            {
+                tk.TrySetResult(o.BytesTransferred);
+                o.Dispose();
+            };
         }
-        LeaveAsync(tk, args);
 
-        return InnerSocket.Connected == false;
+        // Send async
+        return InnerSocket.SendAsync(args)
+            ? tk.Task
+            : Task.FromResult(args.BytesTransferred);
     }
 
     /// <summary>
-    ///     Send data
+    /// Receive data
     /// </summary>
-    /// <param name="data"></param>
-    /// <param name="timeout"></param>
-    /// <returns></returns>
-    public async Task<int> Send(byte[] data, int timeout = -1)
+    /// <param name="buffer">Receive buffer</param>
+    /// <param name="timeout">Receive timeout, -1 for wait infinity</param>
+    /// <returns>Bytes received in <see cref="int"/></returns>
+    public Task<int> Receive(byte[] buffer, int timeout = -1)
     {
-        EnterAsync(out var tk, out var args);
+        PrepareTask<int>(timeout, out var tk, out var args);
         {
             args.UserToken = tk;
-            args.Completed += OnCompleted;
-            args.SetBuffer(data);
-
-            // Send async
-            if (InnerSocket.SendAsync(args))
-                await Task.Run(() => tk.WaitOne(timeout));
+            args.SetBuffer(buffer, 0, buffer.Length);
+            args.Completed += (_, o) =>
+            {
+                tk.TrySetResult(o.BytesTransferred);
+                o.Dispose();
+            };
         }
-        LeaveAsync(tk, args);
 
-        return args.BytesTransferred;
-    }
-
-    /// <summary>
-    ///     Receive data
-    /// </summary>
-    /// <param name="data"></param>
-    /// <param name="timeout"></param>
-    /// <returns></returns>
-    public async Task<int> Receive(byte[] data, int timeout = -1)
-    {
-        EnterAsync(out var tk, out var args);
-        {
-            args.UserToken = tk;
-            args.Completed += OnCompleted;
-            args.SetBuffer(data);
-
-            // Receive async
-            if (InnerSocket.ReceiveAsync(args))
-                await Task.Run(() => tk.WaitOne(timeout));
-        }
-        LeaveAsync(tk, args);
-
-        return args.BytesTransferred;
+        // Receive async
+        return InnerSocket.ReceiveAsync(args)
+            ? tk.Task
+            : Task.FromResult(args.BytesTransferred);
     }
 
     #region Overload methods
 
-    public Task<bool> Connect(string host, int port)
-        => Connect(new IPEndPoint(IPAddress.Parse(host), port));
-
-    public Task<bool> Connect(IPAddress addr, int port)
-        => Connect(new IPEndPoint(addr, port));
-
-    public Task<int> Send(string str)
-        => Send(Encoding.UTF8.GetBytes(str));
-
-    public Task<int> Send(ReadOnlyMemory<byte> bytes)
-        => Send(bytes.ToArray());
-
-    public Task<FuturedSocket> Accept(string ip, ushort port, int timeout = -1)
-        => Accept(new IPEndPoint(IPAddress.Parse(ip), port), timeout);
-
-    private static void OnCompleted(object? s, SocketAsyncEventArgs e)
-        => ((AutoResetEvent)e.UserToken)?.Set();
-
-    private static void EnterAsync(out AutoResetEvent tk, out SocketAsyncEventArgs args)
+    /// <summary>
+    /// Connect to server
+    /// </summary>
+    /// <param name="host">Destination string</param>
+    /// <param name="port">Destination port</param>
+    /// <param name="timeout">Connect timeout, -1 for wait infinity</param>
+    /// <returns>If connected successfully, return True. Otherwise False.</returns>
+    /// <exception cref="EntryPointNotFoundException"></exception>
+    public async Task<bool> Connect(string host, ushort port, int timeout = -1)
     {
-        tk = new AutoResetEvent(false);
-        args = new SocketAsyncEventArgs();
+        // Try parse ipaddress
+        if (IPAddress.TryParse(host, out var ipaddr))
+            return await Connect(ipaddr, port, timeout);
+
+        // Get ipaddress through Dns
+        var ipList = await Dns.GetHostEntryAsync(host!);
+        if (ipList.AddressList.Length <= 0)
+            throw new EntryPointNotFoundException("Dns probe returns no ip address.");
+
+        // Connect it
+        return await Connect(ipList.AddressList[0], port, timeout);
     }
 
-    private static void LeaveAsync(AutoResetEvent token, SocketAsyncEventArgs args)
+    /// <summary>
+    /// Connect to server
+    /// </summary>
+    /// <param name="addr">Destination address</param>
+    /// <param name="port">Destination port</param>
+    /// <param name="timeout">Connect timeout, -1 for wait infinity</param>
+    /// <returns>If connected successfully, return True. Otherwise False.</returns>
+    public Task<bool> Connect(IPAddress addr, ushort port, int timeout = -1)
+        => Connect(new(addr, port), timeout);
+
+    /// <summary>
+    /// Turn socket into listen mode and waiting for a client connection
+    /// </summary>
+    /// <param name="ip">Listening address, "0.0.0.0" for all ports, "127.0.0.1" for local loopback</param>
+    /// <param name="port">Listening port</param>
+    /// <param name="maxconn">Max connections</param>
+    /// <param name="timeout">Accept timeout, -1 for wait infinity</param>
+    /// <returns>If accepts a client, return a connected <see cref="FuturedSocket"/> instance.</returns>
+    public Task<FuturedSocket> Accept(string ip, ushort port, int maxconn, int timeout = -1)
+        => Accept(new(IPAddress.Parse(ip), port), maxconn, timeout);
+
+    /// <summary>
+    /// Send data
+    /// </summary>
+    /// <param name="str">The string data to send</param>
+    /// <param name="timeout">Send timeout</param>
+    /// <returns>Bytes transferred in <see cref="int"/> value</returns>
+    public Task<int> Send(string str, int timeout = -1)
+        => Send(Encoding.UTF8.GetBytes(str), timeout);
+
+    private static void PrepareTask<TType>(int timeout,
+        out TaskCompletionSource<TType> tk, out SocketAsyncEventArgs args)
     {
-        args?.Dispose();
-        token?.Dispose();
+        tk = new TaskCompletionSource<TType>(new CancellationTokenSource(timeout).Token);
+        args = new SocketAsyncEventArgs();
     }
 
     #endregion

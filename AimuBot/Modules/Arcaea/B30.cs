@@ -129,7 +129,7 @@ public partial class Arcaea : ModuleBase
             return null;
 
         var cardCount = overflow ? 39 : 30;
-        LunaUI.LunaUI ui = new(Core.AimuBot.Config.ResourcePath,
+        LunaUI.LunaUI ui = new(Core.Bot.Config.ResourcePath,
             overflow ? "Arcaea/ui/b40_v2.json" : "Arcaea/ui/b30_v2.json");
 
         ui.GetNodeByPath<LuiText>("title/char_bg/name").Text = content.AccountInfo.Name;
@@ -304,7 +304,7 @@ public partial class Arcaea : ModuleBase
         g.TextContrast = 8;
         var sb = new SolidBrush(Color.White);
 
-        var bg = Image.FromFile(Core.AimuBot.Config.ResourcePath.CombinePath("Arcaea/assets/startup/bg.jpg"));
+        var bg = Image.FromFile(Core.Bot.Config.ResourcePath.CombinePath("Arcaea/assets/startup/bg.jpg"));
         var rateX = (double)bg.Width / 1284;
         var rateY = (double)bg.Height / 2778;
         if (rateX < rateY)
@@ -374,7 +374,7 @@ public partial class Arcaea : ModuleBase
                 sb.Color = Color.FromArgb(64, 255, 255, 255);
                 g.FillPath(sb, gp);
 
-                var _f = Core.AimuBot.Config.ResourcePath.CombinePath(
+                var _f = Core.Bot.Config.ResourcePath.CombinePath(
                     $"Arcaea/assets/char/{r.AccountInfo.Character}_icon.png");
                 var fi = new FileInfo(_f);
                 if (fi.Exists)
@@ -410,7 +410,7 @@ public partial class Arcaea : ModuleBase
                 if (rt < 0)
                     rs = "rating_off.png";
 
-                var im = Image.FromFile(Core.AimuBot.Config.ResourcePath.CombinePath($"Arcaea/assets/img/{rs}"));
+                var im = Image.FromFile(Core.Bot.Config.ResourcePath.CombinePath($"Arcaea/assets/img/{rs}"));
                 var xc = 300 / 2 - 240 / 2;
                 g.DrawImage(im, Rectangle.FromLTRB(xc, xc, xc + 240, xc + 240),
                     Rectangle.FromLTRB(0, 0, im.Width, im.Height), GraphicsUnit.Pixel);

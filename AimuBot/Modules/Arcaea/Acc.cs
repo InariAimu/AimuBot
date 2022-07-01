@@ -1,16 +1,10 @@
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Text;
 
-using AimuBot.Core.Bot;
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
-using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
-using AimuBot.Core.Utils;
 using AimuBot.Modules.Arcaea.AuaJson;
-
-using LunaUI.Layouts;
 
 namespace AimuBot.Modules.Arcaea;
 
@@ -98,9 +92,9 @@ public partial class Arcaea : ModuleBase
         
         var pr = await GetPlayData(contentRecord.SongId, contentRecord.Difficulty, ptt - 10, ptt + 10);
 
-        var allPlayers = pr.Content.Sum(x => x.Count);
+        var allPlayers = Enumerable.Sum<ScoreDistItem>(pr.Content, x => x.Count);
 
-        var above = pr.Content.Where(x => x.Fscore * 10000 > contentRecord.Score).Sum(x => x.Count);
+        var above = Enumerable.Where<ScoreDistItem>(pr.Content, x => x.Fscore * 10000 > contentRecord.Score).Sum(x => x.Count);
         if (above == 0)
             above = 1;
 
@@ -111,9 +105,9 @@ public partial class Arcaea : ModuleBase
 
         var pr2 = await GetPlayData(contentRecord.SongId, contentRecord.Difficulty, ptt - 50, ptt + 50);
 
-        var allPlayers2 = pr2.Content.Sum(x => x.Count);
+        var allPlayers2 = Enumerable.Sum<ScoreDistItem>(pr2.Content, x => x.Count);
 
-        var above2 = pr2.Content.Where(x => x.Fscore * 10000 > contentRecord.Score).Sum(x => x.Count);
+        var above2 = Enumerable.Where<ScoreDistItem>(pr2.Content, x => x.Fscore * 10000 > contentRecord.Score).Sum(x => x.Count);
         if (above2 == 0)
             above2 = 1;
 

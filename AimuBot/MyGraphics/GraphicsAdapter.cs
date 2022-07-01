@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace AffTools.MyGraphics;
+namespace AimuBot.MyGraphics;
 
 [StructLayout(LayoutKind.Explicit, Size = 4)]
 public struct ColorRaw

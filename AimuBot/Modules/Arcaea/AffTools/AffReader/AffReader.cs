@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace AffTools.AffReader;
+namespace AimuBot.Modules.Arcaea.AffTools.AffReader;
 
 public class ArcaeaAffReader
 {

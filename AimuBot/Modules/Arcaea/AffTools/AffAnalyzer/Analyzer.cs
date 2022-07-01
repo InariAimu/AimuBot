@@ -1,6 +1,6 @@
-﻿using AffTools.AffReader;
+﻿using AimuBot.Modules.Arcaea.AffTools.AffReader;
 
-namespace AffTools.AffAnalyzer;
+namespace AimuBot.Modules.Arcaea.AffTools.AffAnalyzer;
 
 internal class Analyzer
 {

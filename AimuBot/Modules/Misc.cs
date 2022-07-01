@@ -3,7 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using AimuBot.Core.Bot;
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;

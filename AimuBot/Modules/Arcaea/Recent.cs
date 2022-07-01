@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 
-using AimuBot.Core.Bot;
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
@@ -136,7 +136,7 @@ public partial class Arcaea : ModuleBase
         else
             play_info = content.Record;
 
-        LunaUI.LunaUI ui = new(Core.AimuBot.Config.ResourcePath, "Arcaea/ui/arc_recent_v1.json");
+        LunaUI.LunaUI ui = new(Core.Bot.Config.ResourcePath, "Arcaea/ui/arc_recent_v1.json");
 
         ui.GetNodeByPath<LuiText>("name").Text = content.AccountInfo.Name;
 
@@ -245,7 +245,7 @@ public partial class Arcaea : ModuleBase
         var song_info_raw_diff = song_info_raw.Difficulties[play_info.Difficulty];
         if (song_info_raw_diff.TitleLocalized != null)
         {
-            if (!song_info_raw_diff.TitleLocalized.Ja.IsNullOrEmpty())
+            if (!StringExtension.IsNullOrEmpty(song_info_raw_diff.TitleLocalized.Ja))
             {
                 ui.GetNodeByPath<LuiText>("song_name").Font = "Kazesawa Regular";
                 ui.GetNodeByPath<LuiText>("song_name").Text = song_info_raw_diff.TitleLocalized.Ja;
@@ -258,7 +258,7 @@ public partial class Arcaea : ModuleBase
         }
         else
         {
-            if (!song_info_raw.TitleLocalized.Ja.IsNullOrEmpty())
+            if (!StringExtension.IsNullOrEmpty(song_info_raw.TitleLocalized.Ja))
             {
                 ui.GetNodeByPath<LuiText>("song_name").Font = "Kazesawa Regular";
                 ui.GetNodeByPath<LuiText>("song_name").Text = song_info_raw.TitleLocalized.Ja;

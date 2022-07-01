@@ -1,18 +1,12 @@
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Text;
-using System.Text;
 
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
-using AimuBot.Modules.Arcaea.AuaJson;
 
 using LunaUI.Layouts;
-
-using Microsoft.VisualBasic;
 
 #pragma warning disable CA1416
 #pragma warning disable CS8602
@@ -76,7 +70,7 @@ public partial class Arcaea : ModuleBase
 
     private Image GetRatingImg(int rating)
     {
-        LunaUI.LunaUI ui = new(Core.AimuBot.Config.ResourcePath, "Arcaea/ui/song_rating.json");
+        LunaUI.LunaUI ui = new(Core.Bot.Config.ResourcePath, "Arcaea/ui/song_rating.json");
 
         var ratingMinus = rating;
         var ratingPlus = rating;

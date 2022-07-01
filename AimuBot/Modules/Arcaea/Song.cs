@@ -1,6 +1,7 @@
 ﻿using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
+using AimuBot.Modules.Arcaea.SlstJson;
 
 namespace AimuBot.Modules.Arcaea;
 
@@ -62,8 +63,8 @@ public partial class Arcaea : ModuleBase
                 $"Pack: {song_raw.Set}\n" +
                 $"BPM: {song_raw.Bpm}\n";
 
-        var ratings = song_raw.Difficulties.Select(x => GetRating(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
-        var notes = song_raw.Difficulties.Select(x => GetNotes(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
+        var ratings = Enumerable.Select<ArcaeaSongDifficultyRaw, float>(song_raw.Difficulties, x => GetRating(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
+        var notes = Enumerable.Select<ArcaeaSongDifficultyRaw, int>(song_raw.Difficulties, x => GetNotes(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
 
         if (ratings.Any())
         {

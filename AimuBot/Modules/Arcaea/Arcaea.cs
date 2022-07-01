@@ -1,16 +1,13 @@
 ﻿using System.Drawing;
 using System.Text.RegularExpressions;
 
-using AffTools.Aff2Preview;
-
-using AimuBot.Core.Bot;
+using AimuBot.Core.Config;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
 using AimuBot.Core.Extensions;
-
-using AffTools.Aff2Preview;
+using AimuBot.Modules.Arcaea.AffTools.Aff2Preview;
 
 namespace AimuBot.Modules.Arcaea;
 

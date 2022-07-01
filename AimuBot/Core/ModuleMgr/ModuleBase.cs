@@ -1,7 +1,6 @@
 ﻿using System.Net.WebSockets;
 using System.Reflection;
 
-using AimuBot.Core.Bot;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Utils;
@@ -11,8 +10,6 @@ namespace AimuBot.Core.ModuleMgr;
 
 public class ModuleBase
 {
-    internal AimuBot? Bot { get; set; }
-
     private List<CommandBase> _commands = new();
 
     public string OnGetName()
@@ -37,10 +34,10 @@ public class ModuleBase
 
     protected T? GetConfig<T>(string key, T? defaultValue = default)
     {
-        if (Bot.ModuleMgr.ModuleConfig.TryGet<T>(GetType().FullName, key, out var config))
+        if (Bot.Instance.ModuleMgr.ModuleConfig.TryGet<T>(GetType().FullName, key, out var config))
             return config;
 
-        Bot.ModuleMgr.ModuleConfig.Store(GetType().FullName, key, defaultValue);
+        Bot.Instance.ModuleMgr.ModuleConfig.Store(GetType().FullName, key, defaultValue);
         return defaultValue;
     }
 
@@ -104,7 +101,7 @@ public class ModuleBase
             var (succ, body) = CheckKeyword(cmd.CommandInfo.Command, msg, cmd.CommandInfo.Matching);
             if (!succ) continue;
 
-            var userLevel = AimuBot.Config.AccessLevelControl.GetGroupMessageLevel(msg);
+            var userLevel = Bot.Config.AccessLevelControl.GetGroupMessageLevel(msg);
             if (userLevel <= cmd.CommandInfo.Level)
             {
                 Task.Run(() =>

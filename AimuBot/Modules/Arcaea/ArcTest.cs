@@ -1,13 +1,13 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Security.Cryptography.X509Certificates;
 
-using AimuBot.Core.Bot;
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
 using AimuBot.Modules.Arcaea.AuaJson;
+using AimuBot.Modules.Arcaea.SlstJson;
 
 using Newtonsoft.Json;
 
@@ -97,7 +97,7 @@ public partial class Arcaea : ModuleBase
                 if (item is null)
                     continue;
 
-                maxCount = Math.Max(item.Count, maxCount);
+                maxCount = Math.Max((int)item.Count, maxCount);
                 line.Add(item);
             }
 
@@ -140,7 +140,7 @@ public partial class Arcaea : ModuleBase
                 _db.SaveObject(songExtra);
             }
         });
-        return $"Arctest: {_songInfoRaw.Songs.SongList.Sum(x => x.Difficulties.Count)}";
+        return $"Arctest: {Enumerable.Sum<ArcaeaSongRaw>(_songInfoRaw.Songs.SongList, x => x.Difficulties.Count)}";
     }
     
     public void GetAllSongAliasFromBotArcApi()
@@ -155,7 +155,7 @@ public partial class Arcaea : ModuleBase
 
             var json = sr.Result;
 
-            Console.Write(s.Id);
+            Console.Write((string?)s.Id);
 
             var r = JsonConvert.DeserializeObject<Alias>(json);
 

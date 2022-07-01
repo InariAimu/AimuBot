@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace AimuBot.Core.Bot;
+namespace AimuBot.Core.Config;
 
 [Serializable]
 public class BotConfig

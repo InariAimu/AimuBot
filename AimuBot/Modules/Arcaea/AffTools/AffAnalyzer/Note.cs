@@ -1,4 +1,4 @@
-﻿namespace AffTools.AffAnalyzer;
+﻿namespace AimuBot.Modules.Arcaea.AffTools.AffAnalyzer;
 
 internal struct NoteRaw
 {

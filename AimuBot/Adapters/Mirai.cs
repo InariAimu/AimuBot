@@ -17,33 +17,36 @@ public class Mirai : BotAdapter
 
     public async void StartReceiveMessage()
     {
+        Status = BotAdapterStatus.Connected;
         while (true)
         {
             var s = await StringOverSocket.Receive();
             if (s.IsNullOrEmpty())
             {
                 BotLogger.LogW($"{Name}", "Disconnected");
-                StringOverSocket._workSocket.Dispose();
+                StringOverSocket.WorkSocket.Dispose();
+                Status = BotAdapterStatus.Disposed;
                 return;
             }
 
+            MessageReceived++;
             RaiseMessageEvent(s);
         }
     }
 
     public override async Task SendRawMessage(string message)
     {
-        if (StringOverSocket._workSocket.Connected && Core.AimuBot.Config.EnableSendMessage)
+        if (StringOverSocket.WorkSocket.Connected && Core.Bot.Config.EnableSendMessage)
         {
-            BotLogger.LogV("Bot", message);
+            BotLogger.LogI($"Bot [{Name}]", message);
 
             await StringOverSocket.Send(message);
 
-            //Information.MessageSent++;
+            MessageSent++;
         }
         else
         {
-            BotLogger.LogV("Bot", "[EnableSendMessage: Off] " + message);
+            BotLogger.LogI($"Bot [{Name}]", "[EnableSendMessage: Off] " + message);
         }
     }
 

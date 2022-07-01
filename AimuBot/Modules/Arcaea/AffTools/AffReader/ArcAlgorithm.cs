@@ -1,5 +1,5 @@
 ﻿
-namespace AffTools.AffReader;
+namespace AimuBot.Modules.Arcaea.AffTools.AffReader;
 
 public static class ArcAlgorithm
 {

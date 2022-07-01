@@ -1,4 +1,4 @@
-﻿using AimuBot.Core.Bot;
+﻿using AimuBot.Core.Config;
 
 using JetBrains.Annotations;
 
@@ -55,7 +55,7 @@ public class CommandAttribute : Attribute
     public State State { get; set; } = State.Normal;
     public Matching Matching { get; set; } = Matching.StartsWith;
     public RbacLevel Level { get; set; } = RbacLevel.Normal;
-    public SendType SendType { get; set; } = SendType.Custom;
+    public SendType SendType { get; set; } = SendType.Send;
 
     public CommandAttribute(string cmd)
     {

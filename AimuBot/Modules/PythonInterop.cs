@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 
-using AimuBot.Core.Bot;
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.ModuleMgr;

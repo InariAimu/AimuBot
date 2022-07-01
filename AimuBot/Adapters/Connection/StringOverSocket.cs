@@ -7,12 +7,12 @@ namespace AimuBot.Adapters.Connection;
 
 public class StringOverSocket
 {
-    private readonly RingBuffer<byte> _buff = new RingBuffer<byte>(8192);
-    public FuturedSocket _workSocket { get; set; }
+    private readonly RingBuffer<byte> _buff = new (1024 * 64);
+    public FuturedSocket WorkSocket { get; }
 
     public StringOverSocket(FuturedSocket socket)
     {
-        _workSocket = socket;
+        WorkSocket = socket;
     }
 
     public async Task Send(string str)
@@ -21,12 +21,12 @@ public class StringOverSocket
         var buff = ByteBuffer.Allocate(4 + sendBytes.Length);
         buff.WriteInt(sendBytes.Length);
         buff.WriteBytes(sendBytes, 0, sendBytes.Length);
-        var len = await _workSocket.Send(buff.ToArray());
+        var len = await WorkSocket.Send(buff.ToArray());
     }
 
-    public async Task<string> Receive()
+    public async Task<string?> Receive()
     {
-        var buffer = new byte[4096];
+        var buffer = new byte[1024 * 32];
         try
         {
             while (true)
@@ -47,25 +47,25 @@ public class StringOverSocket
                     }
                 }
 
-                var bytesRead = await _workSocket.Receive(buffer);
-                if (bytesRead == 0)
+                var bytesRead = await WorkSocket.Receive(buffer);
+                switch (bytesRead)
                 {
-                    _workSocket.InnerSocket.Shutdown(SocketShutdown.Both);
-                    _workSocket.InnerSocket.Close();
-                    return "";
-                }
-                else if (bytesRead > 0)
-                {
-                    _buff.AddMany(buffer, bytesRead);
+                    case 0:
+                        WorkSocket.InnerSocket.Shutdown(SocketShutdown.Both);
+                        WorkSocket.InnerSocket.Close();
+                        return null;
+                    case > 0:
+                        _buff.AddMany(buffer, bytesRead);
+                        break;
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[{_workSocket.InnerSocket.RemoteEndPoint}] {ex.Message}\n{ex.StackTrace}");
-            _workSocket.InnerSocket.Shutdown(SocketShutdown.Both);
-            _workSocket.InnerSocket.Close();
-            return "";
+            Console.WriteLine($"[{WorkSocket.InnerSocket.RemoteEndPoint}] {ex.Message}\n{ex.StackTrace}");
+            WorkSocket.InnerSocket.Shutdown(SocketShutdown.Both);
+            WorkSocket.InnerSocket.Close();
+            return null;
         }
     }
 }

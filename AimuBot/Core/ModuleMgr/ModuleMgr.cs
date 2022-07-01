@@ -11,7 +11,6 @@ namespace AimuBot.Core.ModuleMgr;
 public class ModuleMgr
 {
     private readonly List<ModuleBase> _modules = new();
-    public AimuBot Bot { get; set; } = null!;
     public ModuleConfig? ModuleConfig { get; set; }
 
     public bool LoadSubModulesConfig()
@@ -49,7 +48,6 @@ public class ModuleMgr
 
                 try
                 {
-                    module.Bot = Bot;
                     module.LoadCmd();
                     module.OnInit();
                     module.OnReload();

@@ -12,10 +12,10 @@ internal class BotUtil
         => (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalMilliseconds;
 
     public static string CombinePath(string relativePath)
-        => Path.Combine(AimuBot.Config.ResourcePath, relativePath);
+        => Path.Combine(Bot.Config.ResourcePath, relativePath);
 
     public static string ResourcePath
-        => AimuBot.Config.ResourcePath;
+        => Bot.Config.ResourcePath;
 
     public static void SaveImageToJpg(Image image, string relativePath, int quality = 90)
         => image.SaveToJpg(CombinePath(relativePath), quality);

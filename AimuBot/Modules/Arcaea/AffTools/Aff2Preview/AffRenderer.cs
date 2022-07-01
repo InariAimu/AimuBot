@@ -1,9 +1,10 @@
 ﻿using System.Numerics;
 using System.Text.RegularExpressions;
-using AffTools.AffReader;
-using AffTools.MyGraphics;
 
-namespace AffTools.Aff2Preview;
+using AimuBot.Modules.Arcaea.AffTools.AffReader;
+using AimuBot.MyGraphics;
+
+namespace AimuBot.Modules.Arcaea.AffTools.Aff2Preview;
 
 internal class AffRenderer
 {

@@ -1,15 +1,7 @@
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Text;
-
-using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
-using AimuBot.Modules.Arcaea.AuaJson;
-
-using LunaUI.Layouts;
 
 #pragma warning disable CA1416
 #pragma warning disable CS8602

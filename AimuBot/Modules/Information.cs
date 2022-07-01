@@ -3,12 +3,17 @@ using System.Management;
 using System.Reflection;
 using System.Text;
 
-using AimuBot.Core.Bot;
+using AimuBot.Core;
+using AimuBot.Core.Config;
 using AimuBot.Core.Message;
 using AimuBot.Core.ModuleMgr;
+using AimuBot.Core.Utils;
 
 namespace AimuBot.Modules;
 
+[Module(nameof(Information),
+    Version = "1.0.0",
+    Description = "信息")]
 internal class Information : ModuleBase
 {
     private long _startTime = 0;
@@ -24,12 +29,15 @@ internal class Information : ModuleBase
     }
 
     [Command("cs stat",
+        Name = "Bot数据",
+        Description = "Bot数据",
+        Tip = "/cs stat",
         Matching = Matching.Full,
         Level = RbacLevel.Normal)]
     public MessageChain OnStat(BotMessage msg)
     {
         StringBuilder sb = new();
-        sb.Append(Core.AimuBot.Config.BotName + "_CS [Server]");
+        sb.Append(Core.Bot.Config.BotName + "_CS [Server]");
         sb.Append(" ver." + Assembly.GetExecutingAssembly().GetName().Version?.ToString(3));
         sb.AppendLine();
         sb.Append(".Net " + Environment.Version);
@@ -52,6 +60,15 @@ internal class Information : ModuleBase
         var percent = (double)workingSet * 100 / physicalMemory;
         sb.Append($"内存使用：{memory}/{workingSet}/{physicalMemory}M ({percent:F2}%)");
         sb.AppendLine();
+        sb.AppendLine();
+
+        sb.AppendLine("Adapters:");
+        Bot.Instance.BotAdapters.ForEach(x =>
+        {
+            sb.AppendLine($"[{x.Name}] {x.Status} msg: {x.MessageReceived}/{x.MessageSent}");
+        });
+
+        BotLogger.LogI(nameof(OnStat), sb.ToString());
 
         return sb.ToString().Trim();
     }

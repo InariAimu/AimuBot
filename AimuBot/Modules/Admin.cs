@@ -1,4 +1,4 @@
-﻿using AimuBot.Core.Bot;
+﻿using AimuBot.Core.Config;
 using AimuBot.Core.Message;
 using AimuBot.Core.ModuleMgr;
 
@@ -12,7 +12,7 @@ internal class Admin : ModuleBase
         Level = RbacLevel.Super)]
     private MessageChain OnMsgSwitch(BotMessage msg)
     {
-        Core.AimuBot.Config.EnableSendMessage = msg.Content == "on";
-        return $"[Admin] msg-switch {Core.AimuBot.Config.EnableSendMessage}";
+        Core.Bot.Config.EnableSendMessage = msg.Content == "on";
+        return $"[Admin] msg-switch {Core.Bot.Config.EnableSendMessage}";
     }
 }

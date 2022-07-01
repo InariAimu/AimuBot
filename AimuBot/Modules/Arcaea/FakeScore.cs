@@ -21,7 +21,7 @@ public partial class Arcaea : ModuleBase
     {
         var bydSort = _db.GetObjects<SongExtra>("where [song_diff]=3 order by rating desc limit 0,30");
 
-        var list = bydSort.Select(song => new RatingSong
+        var list = Enumerable.Select<SongExtra, RatingSong>(bydSort, song => new RatingSong
             {
                 SongId = song.SongId, Rating = song.Rating, Notes = song.Notes, Difficulty = 3
             })
@@ -29,7 +29,7 @@ public partial class Arcaea : ModuleBase
 
         var ftrSort = _db.GetObjects<SongExtra>("where [song_diff]=2 order by rating desc limit 0,30");
 
-        list.AddRange(ftrSort.Select(song => new RatingSong
+        list.AddRange(Enumerable.Select<SongExtra, RatingSong>(ftrSort, song => new RatingSong
         {
             SongId = song.SongId, Rating = song.Rating, Notes = song.Notes, Difficulty = 2
         }));
@@ -71,7 +71,7 @@ public partial class Arcaea : ModuleBase
                 Score = 10000000 + song.Notes,
                 PerfectCount = song.Notes,
                 ShinyPerfectCount = song.Notes,
-                TimePlayed = BotUtil.Timestamp - Core.AimuBot.Random.Next(2, 24) * 3214 * 1000
+                TimePlayed = BotUtil.Timestamp - Core.Bot.Random.Next(2, 24) * 3214 * 1000
             };
             response.Content.Best30List.Add(record);
         }
@@ -160,7 +160,7 @@ public partial class Arcaea : ModuleBase
                 }
             };
 
-            var im = GetRecentImage_Arcaea(response, bindInfo.ArcId, Core.AimuBot.Random.Next(1, 100));
+            var im = GetRecentImage_Arcaea(response, bindInfo.ArcId, Core.Bot.Random.Next(1, 100));
             im.SaveToJpg(BotUtil.CombinePath("Arcaea/recents/yyw.jpg"));
 
             return new MessageBuilder(ImageChain.Create("Arcaea/recents/yyw.jpg")).Build();

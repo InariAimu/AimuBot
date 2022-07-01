@@ -6,8 +6,10 @@ namespace AimuBot.Adapters;
 
 public enum BotAdapterStatus
 {
+    Waiting,
     Connected,
     Disconnected,
+    Disposed,
 }
 
 public abstract class BotAdapter
@@ -15,10 +17,13 @@ public abstract class BotAdapter
     public string Name { get; set; } = "Bot";
     public string Protocol { get; set; } = "None";
 
-    public BotAdapterStatus Status { get; set; } = BotAdapterStatus.Disconnected;
+    public BotAdapterStatus Status { get; set; } = BotAdapterStatus.Waiting;
 
     public event EventDispatcher.BotEvent<MessageEvent>? OnMessageReceived;
 
+    public int MessageSent { get; set; }
+    public int MessageReceived { get; set; }
+    
     internal void RaiseMessageEvent(string message)
     {
         var m = BotMessage.FromCSCode(message);

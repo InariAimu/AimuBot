@@ -2,9 +2,8 @@
 using AimuBot.Core.Utils;
 
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
-namespace AimuBot.Core.Bot;
+namespace AimuBot.Core.Config;
 
 public enum RbacLevel
 {

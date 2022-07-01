@@ -2,7 +2,7 @@
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 
-namespace AffTools.MyGraphics;
+namespace AimuBot.MyGraphics;
 
 #pragma warning disable CA1416
 

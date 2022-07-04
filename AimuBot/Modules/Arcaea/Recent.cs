@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 
 using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
@@ -12,6 +13,10 @@ using AimuBot.Modules.Arcaea.AuaJson;
 using LunaUI.Layouts;
 
 namespace AimuBot.Modules.Arcaea;
+
+// ReSharper disable PossibleNullReferenceException
+#pragma warning disable CS8601
+#pragma warning disable CS8602
 
 public partial class Arcaea : ModuleBase
 {
@@ -113,72 +118,65 @@ public partial class Arcaea : ModuleBase
         return new MessageBuilder(ImageChain.Create($"Arcaea/recents/{content}.jpg")).Build();
     }
 
-    internal Image? GetRecentImage(Response recent, string arc_id, int recent_type) => recent_type switch
+    internal Image? GetRecentImage(Response recent, string arcId, int recentType) => recentType switch
     {
-        0 => GetRecentImage_Arcaea(recent, arc_id),
-        1 => GetRecentImage_Phigros(recent, arc_id),
+        0 => GetRecentImage_Arcaea(recent, arcId),
+        1 => GetRecentImage_Phigros(recent, arcId),
         _ => null
     };
 
-    internal Image? GetRecentImage_Phigros(Response recent, string arc_id)
+    internal Image? GetRecentImage_Phigros(Response recent, string arcId)
     {
         var content = recent.Content;
-        if (content == null)
+
+        if (content?.AccountInfo == null)
             return null;
 
-        if (content.AccountInfo == null)
-            return null;
+        PlayRecord? playInfo;
 
-        PlayRecord? play_info;
-
-        if (content.RecentScore != null)
-            play_info = content.RecentScore[0];
-        else
-            play_info = content.Record;
+        playInfo = content.RecentScore != null ? content.RecentScore[0] : content.Record;
 
         LunaUI.LunaUI ui = new(Core.Bot.Config.ResourcePath, "Arcaea/ui/arc_recent_v1.json");
 
         ui.GetNodeByPath<LuiText>("name").Text = content.AccountInfo.Name;
 
-        if (content.AccountInfo.Rating >= 0)
-            ui.GetNodeByPath<LuiText>("ptt").Text = ((float)content.AccountInfo.Rating / 100).ToString("F2");
-        else
-            ui.GetNodeByPath<LuiText>("ptt").Text = "--";
+        ui.GetNodeByPath<LuiText>("ptt").Text = content.AccountInfo.Rating >= 0
+            ? ((float)content.AccountInfo.Rating / 100).ToString("F2")
+            : "--";
 
         var lastPttInfos = _db.GetObjects<PttHistoryDesc>(
             "arc_id = $arc_id order by [time] desc limit 0,2",
-            new Dictionary<string, object> { { "$arc_id", arc_id } }
+            new Dictionary<string, object> { { "$arc_id", arcId } }
         );
 
-        string ptt_diff;
-        if (lastPttInfos != null && lastPttInfos.Length > 0)
+        if (lastPttInfos is { Length: > 0 })
         {
-            double ptt_diff_d = 0;
-            if (lastPttInfos[0].Time == play_info.TimePlayed)
+            double pttDiffD = 0;
+            if (lastPttInfos[0].Time == playInfo.TimePlayed)
             {
                 if (lastPttInfos.Length > 1)
-                    ptt_diff_d = content.AccountInfo.RealRating - lastPttInfos[1].Ptt;
+                    pttDiffD = content.AccountInfo.RealRating - lastPttInfos[1].Ptt;
             }
             else
             {
-                ptt_diff_d = content.AccountInfo.RealRating - lastPttInfos[0].Ptt;
+                pttDiffD = content.AccountInfo.RealRating - lastPttInfos[0].Ptt;
             }
 
-            ptt_diff = $"{ptt_diff_d:F2}";
-            if (ptt_diff_d > 0)
+            var pttDiff = $"{pttDiffD:F2}";
+            switch (pttDiffD)
             {
-                ptt_diff = "+" + ptt_diff;
-                ui.GetNodeByPath<LuiText>("ptt_diff").Text = ptt_diff;
-                ui.GetNodeByPath<LuiText>("ptt_diff").Color = Color.FromArgb(255, 172, 255, 255);
-            }
-            else if (ptt_diff_d == 0)
-            {
-                ui.GetNodeByPath<LuiText>("ptt_diff").Visible = false;
-            }
-            else if (ptt_diff_d < 0)
-            {
-                ui.GetNodeByPath<LuiText>("ptt_diff").Text = ptt_diff;
-                ui.GetNodeByPath<LuiText>("ptt_diff").Color = Color.FromArgb(255, 255, 172, 172);
+                case > 0:
+                    pttDiff = "+" + pttDiff;
+                    ui.GetNodeByPath<LuiText>("ptt_diff").Text = pttDiff;
+                    ui.GetNodeByPath<LuiText>("ptt_diff").Color = Color.FromArgb(255, 172, 255, 255);
+                    break;
+                case 0:
+                    ui.GetNodeByPath<LuiText>("ptt_diff").Visible = false;
+                    break;
+                case < 0:
+                    ui.GetNodeByPath<LuiText>("ptt_diff").Text = pttDiff;
+                    ui.GetNodeByPath<LuiText>("ptt_diff").Color = Color.FromArgb(255, 255, 172, 172);
+                    break;
             }
         }
 
@@ -186,114 +184,114 @@ public partial class Arcaea : ModuleBase
         ui.GetNodeByPath<LuiImage>("char").ImagePath =
             $"Arcaea/assets/char/{content.AccountInfo.Character}{sn}_icon.png";
 
-        var song_info_raw = _songInfoRaw[play_info.SongId];
-        ui.GetNodeByPath<LuiImage>("cover").ImagePath = song_info_raw.GetCover(play_info.Difficulty);
+        var songInfoRaw = _songInfoRaw[playInfo.SongId];
+        ui.GetNodeByPath<LuiImage>("cover").ImagePath = songInfoRaw.GetCover(playInfo.Difficulty);
 
-        var grade_text = GetGradeText(play_info.Score, true);
+        var gradeText = GetGradeText(playInfo.Score, true);
 
-        ui.GetNodeByPath<LuiImage>("right/clear_type").ImagePath = $"Arcaea/ArcRecent_Phi/{grade_text}.png";
+        ui.GetNodeByPath<LuiImage>("right/clear_type").ImagePath = $"Arcaea/ArcRecent_Phi/{gradeText}.png";
 
-        ui.GetNodeByPath<LuiText>("right/score").Text = play_info.Score.ToString("D8");
+        ui.GetNodeByPath<LuiText>("right/score").Text = playInfo.Score.ToString("D8");
 
         //get high-score
-        var high_scores = _db.GetObjects<ScoreDesc>(
+        var highScores = _db.GetObjects<ScoreDesc>(
             "arc_id=$arc_id and song_id=$song_id and diff=$diff order by [score] desc limit 0,2",
             new Dictionary<string, object>
-                { { "$arc_id", arc_id }, { "$song_id", play_info.SongId }, { "$diff", play_info.Difficulty } }
+                { { "$arc_id", arcId }, { "$song_id", playInfo.SongId }, { "$diff", playInfo.Difficulty } }
         );
 
-        if (high_scores.Length > 0)
+        if (highScores.Length > 0)
         {
             var hs = 0;
-            if (high_scores[0].time == play_info.TimePlayed)
+            if (highScores[0].time == playInfo.TimePlayed)
             {
-                if (high_scores.Length > 1)
-                    hs = high_scores[1].Score;
+                if (highScores.Length > 1)
+                    hs = highScores[1].Score;
             }
             else
             {
-                hs = high_scores[0].Score;
+                hs = highScores[0].Score;
             }
 
-            var best_text = "";
+            var bestText = "";
 
-            var score_diff = play_info.Score - hs;
+            var scoreDiff = playInfo.Score - hs;
 
-            best_text += score_diff > 0 ? "NEW BEST " : "BEST ";
-            best_text += hs.ToString("D8");
-            best_text += " ";
-            best_text += (score_diff >= 0 ? "+" : "") + score_diff.ToString("D8");
-            ui.GetNodeByPath<LuiText>("right/best").Text = best_text;
+            bestText += scoreDiff > 0 ? "NEW BEST " : "BEST ";
+            bestText += hs.ToString("D8");
+            bestText += " ";
+            bestText += (scoreDiff >= 0 ? "+" : "") + scoreDiff.ToString("D8");
+            ui.GetNodeByPath<LuiText>("right/best").Text = bestText;
         }
         else
         {
             ui.GetNodeByPath<LuiText>("right/best").Text = " ";
         }
 
-        ui.GetNodeByPath<LuiText>("right/pure").Text = play_info.PerfectCount.ToString();
+        ui.GetNodeByPath<LuiText>("right/pure").Text = playInfo.PerfectCount.ToString();
         ui.GetNodeByPath<LuiText>("right/good").Text =
-            (play_info.PerfectCount - play_info.ShinyPerfectCount).ToString();
-        ui.GetNodeByPath<LuiText>("right/far").Text = play_info.NearCount.ToString();
-        ui.GetNodeByPath<LuiText>("right/lost").Text = play_info.MissCount.ToString();
+            (playInfo.PerfectCount - playInfo.ShinyPerfectCount).ToString();
+        ui.GetNodeByPath<LuiText>("right/far").Text = playInfo.NearCount.ToString();
+        ui.GetNodeByPath<LuiText>("right/lost").Text = playInfo.MissCount.ToString();
 
-        var acc = (float)play_info.Score * 100 / 10000000;
-        if ((int)play_info.ClearType == 3)
-            acc = 100 + (float)play_info.ShinyPerfectCount / 100;
+        var acc = (float)playInfo.Score * 100 / 10000000;
+        if ((int)playInfo.ClearType == 3)
+            acc = 100 + (float)playInfo.ShinyPerfectCount / 100;
 
         ui.GetNodeByPath<LuiText>("right/acc").Text = acc.ToString("F2") + "%";
 
-        var song_info_raw_diff = song_info_raw.Difficulties[play_info.Difficulty];
-        if (song_info_raw_diff.TitleLocalized != null)
+        var songInfoRawDiff = songInfoRaw.Difficulties[playInfo.Difficulty];
+        if (songInfoRawDiff.TitleLocalized != null)
         {
-            if (!StringExtension.IsNullOrEmpty(song_info_raw_diff.TitleLocalized.Ja))
+            if (!songInfoRawDiff.TitleLocalized.Ja.IsNullOrEmpty())
             {
                 ui.GetNodeByPath<LuiText>("song_name").Font = "Kazesawa Regular";
-                ui.GetNodeByPath<LuiText>("song_name").Text = song_info_raw_diff.TitleLocalized.Ja;
+                ui.GetNodeByPath<LuiText>("song_name").Text = songInfoRawDiff.TitleLocalized.Ja;
             }
             else
             {
                 ui.GetNodeByPath<LuiText>("song_name").Font = "Exo";
-                ui.GetNodeByPath<LuiText>("song_name").Text = song_info_raw_diff.TitleLocalized.En;
+                ui.GetNodeByPath<LuiText>("song_name").Text = songInfoRawDiff.TitleLocalized.En;
             }
         }
         else
         {
-            if (!StringExtension.IsNullOrEmpty(song_info_raw.TitleLocalized.Ja))
+            if (!songInfoRaw.TitleLocalized.Ja.IsNullOrEmpty())
             {
                 ui.GetNodeByPath<LuiText>("song_name").Font = "Kazesawa Regular";
-                ui.GetNodeByPath<LuiText>("song_name").Text = song_info_raw.TitleLocalized.Ja;
+                ui.GetNodeByPath<LuiText>("song_name").Text = songInfoRaw.TitleLocalized.Ja;
             }
             else
             {
                 ui.GetNodeByPath<LuiText>("song_name").Font = "Noto Sans CJK SC Regular";
-                ui.GetNodeByPath<LuiText>("song_name").Text = song_info_raw.TitleLocalized.En;
+                ui.GetNodeByPath<LuiText>("song_name").Text = songInfoRaw.TitleLocalized.En;
             }
         }
 
-        int bg_id;
-        if (song_info_raw.Side == 0)
-            (_, bg_id) = new List<int> { 0, 5, 1, 3 }.RandomWhenNotEmpty();
+        int bgId;
+        if (songInfoRaw.Side == 0)
+            (_, bgId) = new List<int> { 0, 5, 1, 3 }.RandomWhenNotEmpty();
         else
-            (_, bg_id) = new List<int> { 2, 3, 4, 6 }.RandomWhenNotEmpty();
-        ui.GetNodeByPath<LuiImage>("bg").ImagePath = $"Arcaea/ArcRecent_Phi/{bg_id}_b.png";
+            (_, bgId) = new List<int> { 2, 3, 4, 6 }.RandomWhenNotEmpty();
+        ui.GetNodeByPath<LuiImage>("bg").ImagePath = $"Arcaea/ArcRecent_Phi/{bgId}_b.png";
 
-        var rating_f = GetRating(play_info.SongId, play_info.Difficulty);
+        var ratingF = GetRating(playInfo.SongId, playInfo.Difficulty);
 
-        var difft_str = song_info_raw_diff.Rating.ToString();
-        if (song_info_raw_diff.RatingPlus)
-            difft_str += "+";
+        var difftText = songInfoRawDiff.Rating.ToString();
+        if (songInfoRawDiff.RatingPlus)
+            difftText += "+";
 
-        var rating_str = difft_str;
-        if (rating_f > 0) rating_str = GetRating(play_info.SongId, play_info.Difficulty).ToString("F1");
+        var ratingText = difftText;
+        if (ratingF > 0) ratingText = GetRating(playInfo.SongId, playInfo.Difficulty).ToString("F1");
 
-        var diff_str = GetShortDifficultyText(play_info.Difficulty);
+        var diffText = GetShortDifficultyText(playInfo.Difficulty);
 
-        ui.GetNodeByPath<LuiText>("diff").Text = diff_str + " Lv." + difft_str;
+        ui.GetNodeByPath<LuiText>("diff").Text = diffText + " Lv." + difftText;
 
-        ui.GetNodeByPath<LuiText>("right/rating").Text = rating_str + " > " + play_info.Rating.ToString("F3");
+        ui.GetNodeByPath<LuiText>("right/rating").Text = ratingText + " > " + playInfo.Rating.ToString("F3");
 
         ui.GetNodeByPath<LuiText>("datetime").Text =
-            DateTimeOffset.FromUnixTimeMilliseconds(play_info.TimePlayed).LocalDateTime.ToString();
+            DateTimeOffset.FromUnixTimeMilliseconds(playInfo.TimePlayed).LocalDateTime.ToString(CultureInfo.InvariantCulture);
 
         Image im = new Bitmap(ui.Root.Option.CanvasSize.Width * 85 / 100, ui.Root.Option.CanvasSize.Height * 85 / 100);
         var origin = ui.Render();
@@ -309,19 +307,14 @@ public partial class Arcaea : ModuleBase
         return im;
     }
 
-    private Image? GetRecentImage_Arcaea(Response recent, string arc_id, int ranking = 0)
+    private Image? GetRecentImage_Arcaea(Response recent, string arcId, int ranking = 0)
     {
         var content = recent.Content;
 
         if (content?.AccountInfo == null)
             return null;
 
-        PlayRecord? playInfo = null;
-
-        if (content.RecentScore != null)
-            playInfo = content.RecentScore[0];
-        else
-            playInfo = content.Record;
+        PlayRecord? playInfo = content.RecentScore != null ? content.RecentScore[0] : content.Record;
 
         LunaUI.LunaUI ui = new(BotUtil.ResourcePath, "Arcaea/ui/arc_recent.json");
 
@@ -347,7 +340,7 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("top_bar/user_info/ptt_bg/ptt_tail").PlaceHolder = "";
         }
 
-        var rating_bg_no = content.AccountInfo.Rating switch
+        var ratingBgNumber = content.AccountInfo.Rating switch
         {
             < 0     => "off",
             >= 1250 => "6",
@@ -359,7 +352,7 @@ public partial class Arcaea : ModuleBase
             _       => "0"
         };
         ui.GetNodeByPath<LuiImage>("top_bar/user_info/ptt_bg").ImagePath =
-            $"Arcaea/assets/img/rating_{rating_bg_no}.png";
+            $"Arcaea/assets/img/rating_{ratingBgNumber}.png";
 
         var sn = content.AccountInfo.IsCharUncapped ? "u" : "";
         ui.GetNodeByPath<LuiImage>("top_bar/user_info/char_bg/char").ImagePath =
@@ -370,28 +363,28 @@ public partial class Arcaea : ModuleBase
 
         var lastPttInfos = _db.GetObjects<PttHistoryDesc>(
             "arc_id = $arc_id order by [time] desc limit 0,2",
-            new Dictionary<string, object> { { "$arc_id", arc_id } }
+            new Dictionary<string, object> { { "$arc_id", arcId } }
         );
-        string ptt_diff;
+        string pttDiff;
         if (lastPttInfos != null && lastPttInfos.Length > 0)
         {
-            double ptt_diff_d = 0;
+            double pttDiffD = 0;
             if (lastPttInfos[0].Time == playInfo.TimePlayed)
             {
                 if (lastPttInfos.Length > 1)
-                    ptt_diff_d = content.AccountInfo.RealRating - lastPttInfos[1].Ptt;
+                    pttDiffD = content.AccountInfo.RealRating - lastPttInfos[1].Ptt;
             }
             else
             {
-                ptt_diff_d = content.AccountInfo.RealRating - lastPttInfos[0].Ptt;
+                pttDiffD = content.AccountInfo.RealRating - lastPttInfos[0].Ptt;
             }
 
-            ptt_diff = $"{ptt_diff_d:F2}";
-            switch (ptt_diff_d)
+            pttDiff = $"{pttDiffD:F2}";
+            switch (pttDiffD)
             {
                 case > 0:
-                    ptt_diff = "+" + ptt_diff;
-                    ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").Text = ptt_diff;
+                    pttDiff = "+" + pttDiff;
+                    ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").Text = pttDiff;
                     ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").BorderColor =
                         Color.FromArgb(60, 128, 255, 255);
                     ui.GetNodeByPath<LuiImage>("top_bar/user_info/pott_bg").ImagePath =
@@ -404,7 +397,7 @@ public partial class Arcaea : ModuleBase
                         "Arcaea/assets/layouts/results/rating_keep.png";
                     break;
                 case < 0:
-                    ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").Text = ptt_diff;
+                    ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").Text = pttDiff;
                     ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").BorderColor =
                         Color.FromArgb(60, 255, 128, 128);
                     ui.GetNodeByPath<LuiImage>("top_bar/user_info/pott_bg").ImagePath =
@@ -423,8 +416,8 @@ public partial class Arcaea : ModuleBase
         }
         else
         {
-            ptt_diff = $"+{content.AccountInfo.RealRating:F2}";
-            ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").Text = ptt_diff;
+            pttDiff = $"+{content.AccountInfo.RealRating:F2}";
+            ui.GetNodeByPath<LuiText>("top_bar/user_info/pott_bg/ptt_add").Text = pttDiff;
         }
 
 
@@ -441,9 +434,9 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("banner/score_board/score").ShadeDisplacement = 3;
         }
 
-        var grade_text = GetGradeText(playInfo.Score);
+        var gradeText = GetGradeText(playInfo.Score);
 
-        var (clear_img, clear_img_height) = (int)playInfo.ClearType switch
+        var (clearImg, clearImgHeight) = (int)playInfo.ClearType switch
         {
             0 => ("fail", 55),
             2 => ("full", 75),
@@ -451,40 +444,40 @@ public partial class Arcaea : ModuleBase
             _ => ("normal", 55)
         };
 
-        ui.GetNodeByPath<LuiImage>("banner/clear_type").Size = new Size(700, clear_img_height);
-        ui.GetNodeByPath<LuiImage>("banner/clear_type").ImagePath = $"Arcaea/assets/img/clear_{clear_img}.png";
+        ui.GetNodeByPath<LuiImage>("banner/clear_type").Size = new Size(700, clearImgHeight);
+        ui.GetNodeByPath<LuiImage>("banner/clear_type").ImagePath = $"Arcaea/assets/img/clear_{clearImg}.png";
 
-        ui.GetNodeByPath<LuiImage>("banner/score_board/grade").ImagePath = $"Arcaea/assets/img/grade_{grade_text}.png";
+        ui.GetNodeByPath<LuiImage>("banner/score_board/grade").ImagePath = $"Arcaea/assets/img/grade_{gradeText}.png";
 
         //get high-score
-        var high_scores = _db.GetObjects<ScoreDesc>(
+        var highScores = _db.GetObjects<ScoreDesc>(
             "arc_id=$arc_id and song_id=$song_id and diff=$diff order by [score] desc limit 0,2",
             new Dictionary<string, object>
-                { { "$arc_id", arc_id }, { "$song_id", playInfo.SongId }, { "$diff", playInfo.Difficulty } }
+                { { "$arc_id", arcId }, { "$song_id", playInfo.SongId }, { "$diff", playInfo.Difficulty } }
         );
 
-        if (high_scores.Length > 0)
+        if (highScores.Length > 0)
         {
             var hs = 0;
-            if (high_scores[0].time == playInfo.TimePlayed)
+            if (highScores[0].time == playInfo.TimePlayed)
             {
-                if (high_scores.Length > 1)
-                    hs = high_scores[1].Score;
+                if (highScores.Length > 1)
+                    hs = highScores[1].Score;
             }
             else
             {
-                hs = high_scores[0].Score;
+                hs = highScores[0].Score;
             }
 
             ui.GetNodeByPath<LuiText>("banner/score_board/hi_score").Text =
                 hs.ToString("D8").Insert(5, "\'").Insert(2, "\'");
 
-            var score_diff = playInfo.Score - hs;
-            var score_diff_text =
-                (score_diff >= 0 ? "+" : "") + score_diff.ToString("D8").Insert(5, "\'").Insert(2, "\'");
-            ui.GetNodeByPath<LuiText>("banner/score_board/score_diff").Text = score_diff_text;
+            var scoreDiff = playInfo.Score - hs;
+            var scoreDiffText =
+                (scoreDiff >= 0 ? "+" : "") + scoreDiff.ToString("D8").Insert(5, "\'").Insert(2, "\'");
+            ui.GetNodeByPath<LuiText>("banner/score_board/score_diff").Text = scoreDiffText;
 
-            if (score_diff <= 0)
+            if (scoreDiff <= 0)
                 ui.GetNodeByPath<LuiImage>("banner/score_board").ImagePath =
                     "Arcaea/assets/layouts/results/res_scoresection.png";
         }
@@ -510,7 +503,7 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("banner/perf/big_pure").Text = "+" + playInfo.ShinyPerfectCount;
             ui.GetNodeByPath<LuiText>("banner/perf/far").Text = playInfo.NearCount.ToString();
             ui.GetNodeByPath<LuiText>("banner/perf/lost").Text = playInfo.MissCount.ToString();
-            
+
             ui.GetNodeByPath<LuiText>("banner/perf/big_pure").FontStyle = FontStyle.Regular;
             ui.GetNodeByPath<LuiText>("banner/perf/big_pure").Color = Color.FromArgb(66, 66, 66);
 
@@ -538,26 +531,30 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("banner/perf/lost").Color = normalFontColor;
         }
 
-        var song_info_raw = _songInfoRaw[playInfo.SongId];
-        ui.GetNodeByPath<LuiImage>("banner/cover/Image").ImagePath = song_info_raw.GetCover(playInfo.Difficulty);
+        var songInfoRaw = _songInfoRaw[playInfo.SongId];
+        ui.GetNodeByPath<LuiImage>("banner/cover/Image").ImagePath = songInfoRaw.GetCover(playInfo.Difficulty);
 
-        var (songNameFont, songNameText) = song_info_raw.GetSongFontAndName(playInfo.Difficulty);
+        var (songNameFont, songNameText) = songInfoRaw.GetSongFontAndName(playInfo.Difficulty);
         ui.GetNodeByPath<LuiText>("banner/song_name").Font = songNameFont;
         ui.GetNodeByPath<LuiText>("banner/song_name").Text = songNameText;
 
-        ui.GetNodeByPath<LuiText>("banner/artist_name").Font = song_info_raw.GetArtistFont();
-        ui.GetNodeByPath<LuiText>("banner/artist_name").Text = song_info_raw.Artist;
+        ui.GetNodeByPath<LuiText>("banner/artist_name").Font = songInfoRaw.GetArtistFont();
+        ui.GetNodeByPath<LuiText>("banner/artist_name").Text = songInfoRaw.Artist;
 
-        var rating_f = GetRating(playInfo.SongId, playInfo.Difficulty);
+        var ratingF = GetRating(playInfo.SongId, playInfo.Difficulty);
 
-        string rating_str;
+        if (ranking > 0)
+            ratingF = 0;
 
-        if (rating_f > 0)
-            rating_str = rating_f.ToString("F1");
+        string ratingText;
+
+        if (ratingF > 0)
+            ratingText = ratingF.ToString("F1");
         else
-            rating_str = song_info_raw.GetGameRatingStr(playInfo.Difficulty);
+            ratingText = songInfoRaw.GetGameRatingStr(playInfo.Difficulty);
 
-        var (diff_str, diff_color) = playInfo.Difficulty switch
+
+        var (diffText, diffColor) = playInfo.Difficulty switch
         {
             0 => ("Past", Color.Blue),
             1 => ("Present", Color.ForestGreen),
@@ -566,8 +563,8 @@ public partial class Arcaea : ModuleBase
             _ => ("Unknown", Color.Black)
         };
 
-        ui.GetNodeByPath<LuiText>("banner/diff").Color = diff_color;
-        ui.GetNodeByPath<LuiText>("banner/diff").Text = diff_str + " " + rating_str;
+        ui.GetNodeByPath<LuiText>("banner/diff").Color = diffColor;
+        ui.GetNodeByPath<LuiText>("banner/diff").Text = diffText + " " + ratingText;
         if (ranking == 0)
         {
             ui.GetNodeByPath<LuiText>("banner/max_recall").Text = "PLAY RATING";
@@ -588,16 +585,16 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("right_btn/Text").FontStyle = FontStyle.Bold;
         }
 
-        var target_size_x = ui.Root.Option.CanvasSize.Width * 95 / 100;
-        var target_size_y = ui.Root.Option.CanvasSize.Height * 95 / 100;
+        var targetSizeX = ui.Root.Option.CanvasSize.Width * 95 / 100;
+        var targetSizeY = ui.Root.Option.CanvasSize.Height * 95 / 100;
 
         if (ranking > 0)
         {
-            target_size_x = ui.Root.Option.CanvasSize.Width;
-            target_size_y = ui.Root.Option.CanvasSize.Height;
+            targetSizeX = ui.Root.Option.CanvasSize.Width;
+            targetSizeY = ui.Root.Option.CanvasSize.Height;
         }
 
-        Image im = new Bitmap(target_size_x, target_size_y);
+        Image im = new Bitmap(targetSizeX, targetSizeY);
         var origin = ui.Render();
         using (var g = Graphics.FromImage(im))
         {

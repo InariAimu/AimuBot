@@ -11,6 +11,8 @@ namespace AimuBot.Core.ModuleMgr;
 public class ModuleBase
 {
     private List<CommandBase> _commands = new();
+    public int CommandCount => _commands.Count;
+    public List<CommandBase> CommandList => _commands;
 
     public string OnGetName()
     {
@@ -27,10 +29,8 @@ public class ModuleBase
 
     public virtual bool OnInit() => OnReload();
     public virtual bool OnReload() => true;
-    public virtual bool OnHelp(BotMessage message) => false;
     public virtual bool OnGroupMessage(BotMessage message) => false;
 
-    public int CommandCount => _commands.Count;
 
     protected T? GetConfig<T>(string key, T? defaultValue = default)
     {

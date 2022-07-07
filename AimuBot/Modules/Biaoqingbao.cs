@@ -38,7 +38,7 @@ internal class Biaoqingbao : ModuleBase
     }
 
     [Command("",
-        Name = "获取指定表情包图片",
+        Name = "表情包",
         Description = "获取指定表情包图片",
         Tip = "/<name> [id]",
         Example = "/care\n/care 10",

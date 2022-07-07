@@ -11,9 +11,9 @@ using AimuBot.Core.Utils;
 
 namespace AimuBot.Modules;
 
-[Module(nameof(Information),
+[Module("信息",
     Version = "1.0.0",
-    Description = "信息")]
+    Description = "Bot信息模块")]
 internal class Information : ModuleBase
 {
     private long _startTime = 0;

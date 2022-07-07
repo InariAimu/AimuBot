@@ -18,15 +18,15 @@ using Pinyin4net.Format;
 
 namespace AimuBot.Modules;
 
-[Module(nameof(Misc),
+[Module("杂项",
     Version = "1.0.0",
     Description = "杂项功能")]
 internal class Misc : ModuleBase
 {
     [Command("mmmm",
         Name = "生成猫猫语",
-        Description = "生成猫猫语",
-        Tip = "/mmmm <content>",
+        Description = "将一段话按照拼音声调替换为喵苗秒妙。",
+        Tip = "/mmmm <content>\n/喵苗秒妙 <content>",
         Example = "/mmmm 喵",
         Alias = new string[] { "喵苗秒妙" },
         Category = "杂项",
@@ -142,8 +142,8 @@ internal class Misc : ModuleBase
 
     [Command("https://github.com/",
         Name = "Github repo parser",
-        Description = "Github repo parser",
-        Tip = "Github repo url",
+        Description = "将 Github repo url 链接解析为图片",
+        Tip = "<Github_repo_url>",
         Example = "https://github.com/KonataDev/Konata.Core",
         Category = "杂项",
         Matching = Matching.StartsWithNoLeadChar,

@@ -11,6 +11,9 @@ namespace AimuBot.Core.ModuleMgr;
 public class ModuleMgr
 {
     private readonly List<ModuleBase> _modules = new();
+
+    public List<ModuleBase> ModuleList => _modules;
+    
     public ModuleConfig? ModuleConfig { get; set; }
 
     public bool LoadSubModulesConfig()
@@ -39,47 +42,47 @@ public class ModuleMgr
 
         var types = Assembly.GetExecutingAssembly().GetTypes();
         foreach (var type in types)
-            if (type.IsClass && type.BaseType == typeof(ModuleBase))
+        {
+            if (!type.IsClass || type.BaseType != typeof(ModuleBase)) continue;
+            BotLogger.LogI("LoadModule", $"{type} {type.Name}");
+
+            if (Activator.CreateInstance(type) is not ModuleBase module)
+                continue;
+
+            try
             {
-                BotLogger.LogI("LoadModule", $"{type} {type.Name}");
+                module.LoadCmd();
+                module.OnInit();
+                module.OnReload();
 
-                if (Activator.CreateInstance(type) is not ModuleBase module)
-                    continue;
+                //load module config
+                var fields = type.GetFields(
+                    BindingFlags.NonPublic |
+                    BindingFlags.Instance);
 
-                try
+                foreach (var field in fields)
                 {
-                    module.LoadCmd();
-                    module.OnInit();
-                    module.OnReload();
+                    var ca = field.GetCustomAttribute<ConfigAttribute>();
+                    if (ca is null) continue;
 
-                    //load module config
-                    var fields = type.GetFields(
-                        BindingFlags.NonPublic |
-                        BindingFlags.Instance);
-
-                    foreach (var field in fields)
+                    var fv = ModuleConfig.Get(type.FullName, ca.Name);
+                    if (fv is null)
                     {
-                        var ca = field.GetCustomAttribute<ConfigAttribute>();
-                        if (ca is null) continue;
-
-                        var fv = ModuleConfig.Get(type.FullName, ca.Name);
-                        if (fv is null)
-                        {
-                            fv = ca.DefaultValue;
-                            ModuleConfig.Store(type.FullName, ca.Name, ca.DefaultValue);
-                        }
-
-                        field.SetValue(module, fv);
+                        fv = ca.DefaultValue;
+                        ModuleConfig.Store(type.FullName, ca.Name, ca.DefaultValue);
                     }
-                }
-                catch (Exception ex)
-                {
-                    BotLogger.LogE("LoadModule", $"{ex.Message}\n{ex.StackTrace}");
-                    continue;
-                }
 
-                _modules.Add(module);
+                    field.SetValue(module, fv);
+                }
             }
+            catch (Exception ex)
+            {
+                BotLogger.LogE("LoadModule", $"{ex.Message}\n{ex.StackTrace}");
+                continue;
+            }
+
+            _modules.Add(module);
+        }
 
         if (!hasConfigFile)
         {

@@ -3,7 +3,7 @@ using AimuBot.Core.ModuleMgr;
 
 namespace AimuBot.Modules;
 
-[Module("Entertain",
+[Module("群娱乐",
     Version = "0.1.0",
     Description = "群娱乐")]
 internal class Entertainment : ModuleBase

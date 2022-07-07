@@ -28,7 +28,7 @@ public partial class Arcaea : ModuleBase
 
     [Command("ac set v",
         Name = "设置recent样式",
-        Description = "设置recent样式：\nv0：Arcaea\nv1：Phigros\n...",
+        Description = "设置recent样式：\n- v0：Arcaea\n- v1：Phigros",
         Tip = "/ac set <style_id>",
         Example = "/ac set v0",
         Category = "Arcaea",

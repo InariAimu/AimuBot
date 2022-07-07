@@ -66,10 +66,15 @@ public partial class Arcaea : ModuleBase
         var ratings = Enumerable.Select<ArcaeaSongDifficultyRaw, float>(song_raw.Difficulties, x => GetRating(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
         var notes = Enumerable.Select<ArcaeaSongDifficultyRaw, int>(song_raw.Difficulties, x => GetNotes(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
 
+        var ratingStrs = song_raw.Difficulties.Select(x => song_raw.GetGameRatingStr(song_raw.Difficulties.IndexOf(x)));
+
         if (ratings.Any())
         {
             s += "Ratings: ";
-            s += string.Join(" | ", ratings.Where(x => x > 0));
+            if (ratings.All(x => x > 0))
+                s += string.Join(" | ", ratings.Where(x => x > 0));
+            else
+                s += string.Join(" | ", ratingStrs);
             s += "\n";
         }
 

@@ -78,7 +78,10 @@ public partial class Arcaea : ModuleBase
                 { "diff", difficulty }
             });
 
-        return succ ? songExtra.Rating / 10f : 0;
+        if (succ)
+            return songExtra.Rating / 10f;
+
+        return 0;
     }
 
     private int GetNotes(string songId, int difficulty)

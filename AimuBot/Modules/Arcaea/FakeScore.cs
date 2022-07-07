@@ -86,7 +86,7 @@ public partial class Arcaea : ModuleBase
 
     [Command("ac yyw",
         Name = "音游王生成",
-        Description = "生成一张音游王理论值成绩图（请勿滥用）",
+        Description = "生成一张理论值成绩图（请勿滥用）",
         Tip = "/ac yyw <song_name> [difficulty=ftr]",
         Example = "/ac yyw tempestissimo byd\n/ac yyw 病女",
         Category = "Arcaea",

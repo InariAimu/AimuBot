@@ -13,6 +13,8 @@ internal class Test : ModuleBase
 {
     [Command("ping",
         Name = "Ping",
+        Tip = "/ping",
+        Description = "检查bot在线状态",
         Matching = Matching.Full,
         SendType = SendType.Send)]
     public async Task<MessageChain> OnPing(BotMessage msg)
@@ -24,6 +26,8 @@ internal class Test : ModuleBase
 
     [Command("test-net",
         Name = "Test network connectivity",
+        Tip = "/test-net",
+        Description = "检查bot网络状况",
         Matching = Matching.Full,
         Level = RbacLevel.Super,
         SendType = SendType.Send)]

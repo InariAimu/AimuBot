@@ -12,7 +12,7 @@ public partial class Arcaea : ModuleBase
 {
     [Command("ac b40",
         Name = "查询b40",
-        Description = "查询b40",
+        Description = "查询b40（b30的基础上增加9个地板以下的overflow）",
         Tip = "/ac b40",
         Example = "/ac b40",
         Category = "Arcaea",

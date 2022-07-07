@@ -11,13 +11,14 @@ namespace AimuBot.Modules.Arcaea;
 public partial class Arcaea : ModuleBase
 {
     [Command("acc",
-        Name = "acc",
+        Name = "准度（AUA Ranking）查询",
         Description = "acc",
-        Tip = "/acc",
-        Example = "/acc",
+        Tip = "/acc [<song_name> [difficulty=ftr]]",
+        Example = "/acc\n/acc 骨折光\n/acc 风暴 byd",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         Level = RbacLevel.Normal,
+        State = State.Test,
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnAcc(BotMessage msg)
     {

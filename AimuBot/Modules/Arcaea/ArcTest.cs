@@ -18,6 +18,7 @@ public partial class Arcaea : ModuleBase
     [Command("ac test",
         Name = "test",
         Tip = "/ac test",
+        Description = "Arcaea 测试功能",
         Level = RbacLevel.Super,
         Matching = Matching.Full,
         SendType = SendType.Send)]

@@ -12,8 +12,8 @@ using AimuBot.Modules.Arcaea.AffTools.Aff2Preview;
 namespace AimuBot.Modules.Arcaea;
 
 [Module("Arcaea",
-    Command = "arcaea",
-    Description = "提供Arcaea查分，b30，谱面预览等功能",
+    Command = "ac",
+    Description = "提供Arcaea查分，b30，谱面预览等功能。使用`ac`与其他Bot的`arc`等进行区分，避免一呼百应。同时适量增加操作成本，防止滥用。",
     Eula =
         "您应知悉，使用本模块进行Arcaea查分将违反*Arcaea使用条款 3.2-4 和 3.2-6*，以及*Arcaea二次创作管理条例*。\n因使用本功能而造成的损失（包括但不限于账号被lowiro封禁、shadowban等），Aimubot开发组不予承担任何责任。",
     Privacy =
@@ -97,7 +97,7 @@ public partial class Arcaea : ModuleBase
         Name = "绑定 Arcaea",
         Description = "绑定 ArcaeaId 或 Name（推荐使用数字 id）",
         Tip = "/ac bind <arc_id>",
-        Example = "/ac bind nagiha0798\n/ac bind 000000001",
+        Example = "/ac bind ToasterKoishi\n/ac bind 000000001",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         Level = RbacLevel.Normal,
@@ -151,7 +151,7 @@ public partial class Arcaea : ModuleBase
     }
 
     [Command("ac chart",
-        Name = "获取2d谱面预览",
+        Name = "谱面预览",
         Description = "获取2d谱面预览",
         Tip = "/ac chart <song_name> [difficulty=ftr]",
         Example = "/ac chart 猫魔王 byd\n/ac chart dropdead pst\nac chart ifi",

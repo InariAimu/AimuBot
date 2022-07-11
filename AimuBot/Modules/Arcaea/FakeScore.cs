@@ -11,11 +11,12 @@ public partial class Arcaea : ModuleBase
 {
     [Command("ac yyw b30",
         Name = "音游王生成（b30）",
-        Description = "生成一张音游王b30成绩图（请勿滥用）",
-        Tip = "/ac yyw b30",
+        Description = "生成一张音游王 b30 成绩图（即最高理论 ptt 值）",
+        BlocksBefore = new[] { "::: warning 注意\n请勿滥用\n:::" },
+        Template = "/ac yyw b30",
         Example = "/ac yyw b30",
         Category = "Arcaea",
-        Matching = Matching.Full,
+        Matching = Matching.Exact,
         SendType = SendType.Reply)]
     public MessageChain OnYYWB30(BotMessage msg)
     {
@@ -53,7 +54,7 @@ public partial class Arcaea : ModuleBase
                     IsCharUncapped = true,
                     Character = 2,
                     Name = bindInfo.Name,
-                    Rating = 1288
+                    Rating = 1305
                 },
                 Best30List = new List<PlayRecord>(30)
             }
@@ -86,9 +87,10 @@ public partial class Arcaea : ModuleBase
 
     [Command("ac yyw",
         Name = "音游王生成",
-        Description = "生成一张理论值成绩图（请勿滥用）",
-        Tip = "/ac yyw <song_name> [difficulty=ftr]",
-        Example = "/ac yyw tempestissimo byd\n/ac yyw 病女",
+        Description = "生成指定谱面的理论值成绩图",
+        BlocksBefore = new[] { "::: warning 注意\n请勿滥用\n:::" },
+        Template = "/ac yyw <song_name> [difficulty=ftr]",
+        Example = "/ac yyw 猫光 byd\n/ac yyw 病女",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
@@ -140,7 +142,7 @@ public partial class Arcaea : ModuleBase
                         IsCharUncapped = true,
                         Character = 2,
                         Name = bindInfo.Name,
-                        Rating = 1288
+                        Rating = 1305
                     },
                     RecentScore = new List<PlayRecord>
                     {

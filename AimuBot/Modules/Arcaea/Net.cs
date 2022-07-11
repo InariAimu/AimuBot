@@ -62,7 +62,7 @@ public partial class Arcaea : ModuleBase
     {
         var json =
             await GetFromBotArcApi(
-                $"user/best?usercode={userNameOrCode}&songname={WebUtility.UrlEncode(songName)}&difficulty={difficulty}");
+                $"user/best?user={userNameOrCode}&songname={WebUtility.UrlEncode(songName)}&difficulty={difficulty}");
 
         var r = JsonConvert.DeserializeObject<Response>(json);
 

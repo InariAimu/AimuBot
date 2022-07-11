@@ -16,10 +16,11 @@ namespace AimuBot.Modules.Arcaea;
 public partial class Arcaea : ModuleBase
 {
     [Command("ac rating",
-        Name = "查询定数",
-        Description = "查询定数",
-        Tip = "/ac rating <rating>",
-        Example = "/ac rating 9.9",
+        Alias = new[] { "ac r" },
+        Name = "定数表查询",
+        Description = "列出指定定数以及 ±0.1 范围的所有谱面（如果存在），当定数 ≤8.0 时为 ±0.5。",
+        Template = "/ac rating <rating>\n/ac r <rating>",
+        Example = "/ac rating 9.9\n/ac r 11.4",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
@@ -65,7 +66,7 @@ public partial class Arcaea : ModuleBase
             1 => Color.LimeGreen,
             2 => Color.Purple,
             3 => Color.Red,
-            _ => Color.Black,
+            _ => Color.Black
         };
 
     private Image GetRatingImg(int rating)
@@ -80,9 +81,9 @@ public partial class Arcaea : ModuleBase
         {
             var d = rating % 10;
             if (d < 5)
-                rating = (rating / 10) * 10 + 5;
+                rating = rating / 10 * 10 + 5;
             else if (d < 10)
-                rating = (rating / 10) * 10 + 10;
+                rating = rating / 10 * 10 + 10;
         }
 
         switch (rating)
@@ -111,9 +112,12 @@ public partial class Arcaea : ModuleBase
         if (rating == 1)
             ratingMinus = -1;
 
-        var songExtraPlus = _db.GetObjects<SongExtra>("rating=$rating", new() { { "rating", ratingPlus } });
-        var songExtra = _db.GetObjects<SongExtra>("rating=$rating", new() { { "rating", rating } });
-        var songExtraMinus = _db.GetObjects<SongExtra>("rating=$rating", new() { { "rating", ratingMinus } });
+        var songExtraPlus = _db.GetObjects<SongExtra>("rating=$rating",
+            new Dictionary<string, object> { { "rating", ratingPlus } });
+        var songExtra =
+            _db.GetObjects<SongExtra>("rating=$rating", new Dictionary<string, object> { { "rating", rating } });
+        var songExtraMinus = _db.GetObjects<SongExtra>("rating=$rating",
+            new Dictionary<string, object> { { "rating", ratingMinus } });
 
         LogMessage($"{ratingPlus},{rating},{ratingMinus}");
 
@@ -140,7 +144,7 @@ public partial class Arcaea : ModuleBase
                 var s = _songInfoRaw.Songs.SongList.Find(x => x.Id == song.SongId);
                 ui.GetNodeByPath<LuiImage>($"Image/rating_table/line_{index}/song_table/song_{i}").ImagePath =
                     s.GetCover(song.Difficulty);
-                
+
                 if (song.Difficulty == 2)
                     ui.GetNodeByPath<LuiRect>($"Image/rating_table/line_{index}/song_table/song_{i}/diff").Visible =
                         false;
@@ -164,7 +168,7 @@ public partial class Arcaea : ModuleBase
                 var s = _songInfoRaw.Songs.SongList.Find(x => x.Id == song.SongId);
                 ui.GetNodeByPath<LuiImage>($"Image/rating_table/line_{index}/song_table/song_{i}").ImagePath =
                     s.GetCover(song.Difficulty);
-                
+
                 if (song.Difficulty == 2)
                     ui.GetNodeByPath<LuiRect>($"Image/rating_table/line_{index}/song_table/song_{i}/diff").Visible =
                         false;
@@ -191,7 +195,7 @@ public partial class Arcaea : ModuleBase
                 var s = _songInfoRaw.Songs.SongList.Find(x => x.Id == song.SongId);
                 ui.GetNodeByPath<LuiImage>($"Image/rating_table/line_{index}/song_table/song_{i}").ImagePath =
                     s.GetCover(song.Difficulty);
-                
+
                 if (song.Difficulty == 2)
                     ui.GetNodeByPath<LuiRect>($"Image/rating_table/line_{index}/song_table/song_{i}/diff").Visible =
                         false;

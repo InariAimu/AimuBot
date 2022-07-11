@@ -11,8 +11,8 @@ public partial class Arcaea
 {
     [Command("ac info",
         Name = "指定谱面成绩查询",
-        Description = "指定谱面成绩查询",
-        Tip = "/ac info <song_name> [difficulty=ftr]",
+        Description = "查询指定谱面的成绩（默认难度为 ftr，如需要其他难度需要指定）。",
+        Template = "/ac info <song_name> [difficulty=ftr]",
         Example = "/ac info ac\n/ac info tempestissimo byd\n/ac info 猫魔王",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
@@ -110,9 +110,9 @@ public partial class Arcaea
 
     [Command("ac usrinfo",
         Name = "指定玩家成绩查询",
-        Description = "获取指定玩家指定谱面的游玩成绩",
-        Tip = "/ac usrinfo <arc_id> <song_name> [difficulty=ftr]",
-        Example = "/ac usrinfo NitroX72 lfdy\n/ac usrinfo 062596721 lfdy",
+        Description = "获取指定玩家指定谱面的游玩成绩（默认难度为 ftr）",
+        Template = "/ac usrinfo <arc_id> <song_name> [difficulty=ftr]",
+        Example = "/ac usrinfo NitroX72 lfdy\n/ac usrinfo SkisK49 pentiment byd",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
         CooldownSecond = 10,

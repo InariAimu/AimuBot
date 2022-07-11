@@ -13,7 +13,8 @@ namespace AimuBot.Modules;
 
 [Module("WolframAlpha",
     Version = "1.0.1",
-    Description = "WolframAlpha查询（请使用英语）")]
+    Description = "WolframAlpha查询（请使用英语）",
+    Eula = "禁止商业用途")]
 internal class WolframAlpha : ModuleBase
 {
     [Config("api_key", DefaultValue = "XXXXXX-XXXXXXXXXX")]
@@ -21,8 +22,8 @@ internal class WolframAlpha : ModuleBase
 
     [Command("wa",
         Name = "WolframAlpha查询",
-        Description = "进行一次 WolframAlpha 查询（请使用英语）",
-        Tip = "/wa <query_content>",
+        Description = "进行一次 [WolframAlpha](https://www.wolframalpha.com/) 查询（请使用英语）",
+        Template = "/wa <query_content>",
         Example = "/wa cat\n/wa sin(x)dx\n/wa mass of earth",
         NeedSensitivityCheck = true,
         CooldownType = CooldownType.User,

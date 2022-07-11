@@ -6,7 +6,7 @@ namespace AimuBot.Core.ModuleMgr;
 
 public enum Matching
 {
-    Full,
+    Exact,
     StartsWith,
     StartsWithNoLeadChar,
     Regex,
@@ -47,7 +47,8 @@ public class CommandAttribute : Attribute
     public string[]? Alias { get; set; }
     public string Category { get; set; } = "";
     public string Description { get; set; } = "";
-    public string Tip { get; set; } = "";
+    public string[]? BlocksBefore { get; set; } = null;
+    public string Template { get; set; } = "";
     public string Example { get; set; } = "";
     public bool NeedSensitivityCheck { get; set; }
     public CooldownType CooldownType { get; set; } = CooldownType.None;
@@ -65,5 +66,5 @@ public class CommandAttribute : Attribute
     /// <summary>
     /// For display purpose. replaced \n to \\n
     /// </summary>
-    public string ShowTip => Tip.Replace("\n", "\\n");
+    public string ShowTip => Template.Replace("\n", "\\n");
 }

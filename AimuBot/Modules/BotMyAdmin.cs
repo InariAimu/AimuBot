@@ -12,14 +12,15 @@ namespace AimuBot.Modules;
 
 [Module("BotMyAdmin",
     Version = "1.0.0",
-    Description = "数据库操作")]
+    Description = "BotMyAdmin 数据库管理")]
 public class BotMyAdmin : ModuleBase
 {
     private string ConnectionString;
 
     [Command("bma open",
         Name = "Open",
-        Tip = "/bma open <db_name>",
+        Template = "/bma open <db_name>",
+        Description = "连接数据库",
         Level = RbacLevel.Super,
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
@@ -35,7 +36,8 @@ public class BotMyAdmin : ModuleBase
 
     [Command("bma exec",
         Name = "Exec",
-        Tip = "/bma exec <sql>",
+        Template = "/bma exec <sql>",
+        Description = "执行无返回值 sql",
         Level = RbacLevel.Super,
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
@@ -55,7 +57,8 @@ public class BotMyAdmin : ModuleBase
 
     [Command("bma q",
         Name = "Query",
-        Tip = "/bma q <sql>",
+        Template = "/bma q <sql>",
+        Description = "执行查询 sql",
         Level = RbacLevel.Super,
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]

@@ -59,7 +59,7 @@ public class ModuleBase
 
                 if (param is not CommandAttribute cmd) continue;
 
-                if (cmd.State == State.Normal)
+                if (cmd.State is State.Normal or State.Test)
                 {
                     if (method.ReturnType == typeof(MessageChain) || method.ReturnType == typeof(Task<MessageChain>))
                     {
@@ -173,7 +173,7 @@ public class ModuleBase
         var s = desc.Body.Trim();
         switch (resolveType)
         {
-            case Matching.Full:
+            case Matching.Exact:
             {
                 var wd = $"/{keyword}";
                 if (s.ToLower() == wd)

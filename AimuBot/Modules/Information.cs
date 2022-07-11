@@ -5,6 +5,7 @@ using System.Text;
 
 using AimuBot.Core;
 using AimuBot.Core.Config;
+using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
@@ -28,16 +29,65 @@ internal class Information : ModuleBase
         return true;
     }
 
+    [Command("ping",
+        Name = "Ping！",
+        Template = "/ping",
+        Description = "检查 bot 在线状态",
+        Matching = Matching.Exact,
+        SendType = SendType.Send)]
+    public async Task<MessageChain> OnPing(BotMessage msg)
+    {
+        await Task.Delay(BotUtil.Random.Next(100, 1000));
+        var names = new[] { "Konata", "Kagami", "Tsukasa", "Miyuki" };
+        return "Hello, I'm " + names.Random();
+    }
+
+    [Command("test-net",
+        Name = "网络检查",
+        Template = "/test-net",
+        Description = "检查bot网络状况:\n- google\n- google proxy\n- github\n- github proxy",
+        Matching = Matching.Exact,
+        Level = RbacLevel.Super,
+        SendType = SendType.Send)]
+    public MessageChain OnTestNet(BotMessage msg)
+    {
+        var urls = new[] { "https://www.google.com.hk", "https://github.com/InariAimu/AimuBot.git" };
+
+        var tasks = new List<Task>();
+        foreach (var url in urls)
+        {
+            tasks.Add(url.UrlDownload(false));
+            tasks.Add(url.UrlDownload(true));
+        }
+
+        var ret = "";
+
+        try
+        {
+            Task.WaitAll(tasks.ToArray());
+        }
+        catch (AggregateException ex)
+        {
+            foreach (var e in ex.InnerExceptions) BotLogger.LogW(nameof(OnTestNet), ex.Message);
+        }
+        finally
+        {
+            ret = string.Join('\n', tasks.Select(t => $"t{t.Id}: {t.Status}"));
+        }
+
+        return ret;
+    }
+
     [Command("cs stat",
         Name = "Bot数据",
-        Description = "Bot数据",
-        Tip = "/cs stat",
-        Matching = Matching.Full,
+        Description = "显示 Bot 运行数据",
+        Template = "/cs stat",
+        Matching = Matching.Exact,
         Level = RbacLevel.Normal)]
     public MessageChain OnStat(BotMessage msg)
     {
         StringBuilder sb = new();
-        sb.Append(Core.Bot.Config.BotName + "_CS [Server]");
+        sb.Append(Bot.Config.BotName + "_CS [Server]");
         sb.Append(" ver." + Assembly.GetExecutingAssembly().GetName().Version?.ToString(3));
         sb.AppendLine();
         sb.Append(".Net " + Environment.Version);

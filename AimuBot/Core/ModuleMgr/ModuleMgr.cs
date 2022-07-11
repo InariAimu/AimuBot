@@ -41,7 +41,7 @@ public class ModuleMgr
         var hasConfigFile = LoadSubModulesConfig();
 
         var types = Assembly.GetExecutingAssembly().GetTypes();
-        foreach (var type in types)
+        foreach (var type in types.OrderBy(x => x.Name))
         {
             if (!type.IsClass || type.BaseType != typeof(ModuleBase)) continue;
             BotLogger.LogI("LoadModule", $"{type} {type.Name}");

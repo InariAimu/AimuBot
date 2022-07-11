@@ -11,14 +11,16 @@ namespace AimuBot.Modules.Arcaea;
 public partial class Arcaea : ModuleBase
 {
     [Command("ac b40",
-        Name = "查询b40",
-        Description = "查询b40（b30的基础上增加9个地板以下的overflow）",
-        Tip = "/ac b40",
+        Name = "查询 b40",
+        Description = "查询 b40（在原有 b30 的基础上增加 9 个地板以下的 overflow）",
+        BlocksBefore = new[]
+            { "::: warning 注意\n您的 ptt 越低，则查分所需要的等待时间越长（有时可能长达两分钟以上），这并不意味着 bot 失去响应。请耐心等待，不要重复查询。\n:::" },
+        Template = "/ac b40",
         Example = "/ac b40",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
         CooldownSecond = 30,
-        Matching = Matching.Full,
+        Matching = Matching.Exact,
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnB40(BotMessage msg)
     {

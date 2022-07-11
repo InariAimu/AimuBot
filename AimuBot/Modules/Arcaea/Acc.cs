@@ -11,9 +11,11 @@ namespace AimuBot.Modules.Arcaea;
 public partial class Arcaea : ModuleBase
 {
     [Command("acc",
-        Name = "准度（AUA Ranking）查询",
-        Description = "acc",
-        Tip = "/acc [<song_name> [difficulty=ftr]]",
+        Name = "Aua 排名查询",
+        Description = "查询您在 ptt 接近的玩家中的排名情况。可用来分析是否虚高或虚低。",
+        BlocksBefore = new[]
+            { "::: warning 注意\n**此命令会占用大量查分资源，请勿滥用**，可能需要较长时间响应，不要重复查询。\n:::" },
+        Template = "/acc [<song_name> [difficulty=ftr]]",
         Example = "/acc\n/acc 骨折光\n/acc 风暴 byd",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
@@ -90,12 +92,13 @@ public partial class Arcaea : ModuleBase
             sb.Append("No Aua rank.");
             return sb.ToString();
         }
-        
+
         var pr = await GetPlayData(contentRecord.SongId, contentRecord.Difficulty, ptt - 10, ptt + 10);
 
         var allPlayers = Enumerable.Sum<ScoreDistItem>(pr.Content, x => x.Count);
 
-        var above = Enumerable.Where<ScoreDistItem>(pr.Content, x => x.Fscore * 10000 > contentRecord.Score).Sum(x => x.Count);
+        var above = Enumerable.Where<ScoreDistItem>(pr.Content, x => x.Fscore * 10000 > contentRecord.Score)
+            .Sum(x => x.Count);
         if (above == 0)
             above = 1;
 
@@ -108,7 +111,8 @@ public partial class Arcaea : ModuleBase
 
         var allPlayers2 = Enumerable.Sum<ScoreDistItem>(pr2.Content, x => x.Count);
 
-        var above2 = Enumerable.Where<ScoreDistItem>(pr2.Content, x => x.Fscore * 10000 > contentRecord.Score).Sum(x => x.Count);
+        var above2 = Enumerable.Where<ScoreDistItem>(pr2.Content, x => x.Fscore * 10000 > contentRecord.Score)
+            .Sum(x => x.Count);
         if (above2 == 0)
             above2 = 1;
 

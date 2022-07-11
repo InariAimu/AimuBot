@@ -26,9 +26,9 @@ public partial class Arcaea : ModuleBase
     };
 
     [Command("ac b30 set v",
-        Name = "设置b30样式",
-        Description = "设置b30样式（推荐v2)",
-        Tip = "/ac b30 set <style>",
+        Name = "设置 b30 样式",
+        Description = "设置 b30样式（推荐 v2)\n- v0:列表\n- v1:图标\n- v2:新列表（推荐）",
+        Template = "/ac b30 set <style>",
         Example = "/ac b30 set v2",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
@@ -48,14 +48,16 @@ public partial class Arcaea : ModuleBase
     }
 
     [Command("ac b30",
-        Name = "查询b30",
-        Description = "查询b30",
-        Tip = "/ac b30",
+        Name = "查询 b30",
+        Description = "进行一次 best30 查询。",
+        BlocksBefore = new[]
+            { "::: warning 注意\n您的 ptt 越低，则查分所需要的等待时间越长（有时可能长达两分钟以上），这并不意味着 bot 失去响应。请耐心等待，不要重复查询。\n:::" },
+        Template = "/ac b30",
         Example = "/ac b30",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
         CooldownSecond = 30,
-        Matching = Matching.Full,
+        Matching = Matching.Exact,
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnB30(BotMessage msg)
     {
@@ -77,7 +79,8 @@ public partial class Arcaea : ModuleBase
         foreach (var playRecord in response.Content.Best30List) UpdatePlayerScoreRecord(accountInfo, playRecord);
 
         double maxR10 = 0;
-        for (var i = 0; i < response.Content.Best30List.Count && i < 10; i++) maxR10 += response.Content.Best30List[i].Rating;
+        for (var i = 0; i < response.Content.Best30List.Count && i < 10; i++)
+            maxR10 += response.Content.Best30List[i].Rating;
         var maxPtt = (response.Content.Best30Avg * 30 + maxR10) / 40;
 
         PttHistoryDesc pttHistoryDesc = new()
@@ -150,6 +153,7 @@ public partial class Arcaea : ModuleBase
         var ratingBgNo = content.AccountInfo.Rating switch
         {
             < 0     => "off",
+            >= 1300 => "7",
             >= 1250 => "6",
             >= 1200 => "5",
             >= 1100 => "4",
@@ -169,14 +173,15 @@ public partial class Arcaea : ModuleBase
         for (var i = 0; i < content.Best30List.Count && i < 10; i++) maxR10 += content.Best30List[i].Rating;
         var maxPtt = (content.Best30Avg * 30 + maxR10) / 40;
         ui.GetNodeByPath<LuiText>("title/b30max").Text = $"MaxPtt {maxPtt:F3}";
-        
-        ui.GetNodeByPath<LuiText>("title/r10").Text = content.AccountInfo.Rating >= 0 ? $"Recent10 {content.Recent10Avg:F3}" : " ";
+
+        ui.GetNodeByPath<LuiText>("title/r10").Text =
+            content.AccountInfo.Rating >= 0 ? $"Recent10 {content.Recent10Avg:F3}" : " ";
 
         var b30Table = ui.GetNodeByPath<LuiCloneTableLayout>("b30_table");
         b30Table.CloneLayouts(cardCount, "block_");
 
         double minRating = 0;
-        
+
         for (var i = 0; i < cardCount; i++)
         {
             PlayRecord playInfo;
@@ -189,7 +194,7 @@ public partial class Arcaea : ModuleBase
 
             if (i == content.Best30List.Count - 1)
                 minRating = playInfo.Rating;
-            
+
             var songInfoRaw = _songInfoRaw[playInfo.SongId];
 
             ui.GetNodeByPath<LuiImage>($"b30_table/block_{i}/cover").ImagePath =
@@ -206,7 +211,7 @@ public partial class Arcaea : ModuleBase
                 playInfo.Score.ToString("D8").Insert(5, "\'").Insert(2, "\'");
 
             ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/idx").Text = $"#{i + 1}";
-            
+
             if (playInfo.Score >= 10000000)
                 ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/rating").Color = Color.DarkCyan;
 
@@ -217,10 +222,8 @@ public partial class Arcaea : ModuleBase
                 ratingStr = rating.ToString("F1");
 
                 if (i >= content.Best30List.Count)
-                {
                     if (rating + 2 <= minRating)
                         ui.GetNodeByPath<LuiText>($"b30_table/block_{i}/title/rating").Color = Color.Red;
-                }
             }
             else
             {
@@ -404,7 +407,8 @@ public partial class Arcaea : ModuleBase
                     < 1100 => 3,
                     < 1200 => 4,
                     < 1250 => 5,
-                    _      => 6
+                    < 1300 => 6,
+                    _      => 7
                 };
                 var rs = $"rating_{rt}.png";
                 if (rt < 0)

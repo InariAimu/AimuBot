@@ -27,9 +27,9 @@ public partial class Arcaea : ModuleBase
     };
 
     [Command("ac set v",
-        Name = "设置recent样式",
-        Description = "设置recent样式：\n- v0：Arcaea\n- v1：Phigros",
-        Tip = "/ac set <style_id>",
+        Name = "设置 Recent 样式",
+        Description = "设置 recent 样式：\n- v0：Arcaea\n- v1：Phigros",
+        Template = "/ac set <style_id>",
         Example = "/ac set v0",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
@@ -50,14 +50,14 @@ public partial class Arcaea : ModuleBase
     }
 
     [Command("ac",
-        Name = "Recent",
+        Name = "Recent 查询",
         Description = "获取最近一次游玩成绩",
-        Tip = "/ac",
+        Template = "/ac",
         Example = "/ac",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
         CooldownSecond = 30,
-        Matching = Matching.Full,
+        Matching = Matching.Exact,
         Level = RbacLevel.Normal,
         SendType = SendType.Reply)]
     public async Task<MessageChain> OnRecent(BotMessage msg)
@@ -95,9 +95,9 @@ public partial class Arcaea : ModuleBase
     }
 
     [Command("ac usr",
-        Name = "指定玩家Recent",
+        Name = "指定玩家 Recent 查询",
         Description = "获取指定玩家最近一次游玩成绩",
-        Tip = "/ac usr <arc_id>",
+        Template = "/ac usr <arc_id>",
         Example = "/ac usr ToasterKoishi\n/ac usr 582325489",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
@@ -291,7 +291,8 @@ public partial class Arcaea : ModuleBase
         ui.GetNodeByPath<LuiText>("right/rating").Text = ratingText + " > " + playInfo.Rating.ToString("F3");
 
         ui.GetNodeByPath<LuiText>("datetime").Text =
-            DateTimeOffset.FromUnixTimeMilliseconds(playInfo.TimePlayed).LocalDateTime.ToString(CultureInfo.InvariantCulture);
+            DateTimeOffset.FromUnixTimeMilliseconds(playInfo.TimePlayed).LocalDateTime
+                .ToString(CultureInfo.InvariantCulture);
 
         Image im = new Bitmap(ui.Root.Option.CanvasSize.Width * 85 / 100, ui.Root.Option.CanvasSize.Height * 85 / 100);
         var origin = ui.Render();
@@ -314,15 +315,27 @@ public partial class Arcaea : ModuleBase
         if (content?.AccountInfo == null)
             return null;
 
-        PlayRecord? playInfo = content.RecentScore != null ? content.RecentScore[0] : content.Record;
+        var playInfo = content.RecentScore != null ? content.RecentScore[0] : content.Record;
 
         LunaUI.LunaUI ui = new(BotUtil.ResourcePath, "Arcaea/ui/arc_recent.json");
 
         if (ranking == 0)
         {
+            ui.GetNodeByPath<LuiImage>("top_bar/user_info/dan_bg").Visible = false;
             ui.GetNodeByPath<LuiImage>("top_bar/user_info/rank_bg").Visible = false;
             ui.GetNodeByPath<LuiImage>("top_bar/user_info/rank_frame").Visible = false;
             ui.GetNodeByPath<LuiImage>("top_bar/user_info/pott_bg").Position = new Point(110, -45);
+        }
+        else
+        {
+            ui.GetNodeByPath<LuiImage>("top_bar/user_info/dan_bg").Visible = true;
+            var luiName = ui.GetNodeByPath<LuiText>("top_bar/user_info/player_name");
+            luiName.Color = Color.White;
+            luiName.HasBorder = true;
+            luiName.BorderDisplacement = 1.5f;
+            luiName.BorderColor = Color.FromArgb(255, 224, 224, 224);
+            luiName.HasShade = true;
+            luiName.ShadeColor = Color.FromArgb(128, 0, 0, 0);
         }
 
         ui.GetNodeByPath<LuiText>("top_bar/user_info/player_name").Text = content.AccountInfo.Name;
@@ -343,6 +356,7 @@ public partial class Arcaea : ModuleBase
         var ratingBgNumber = content.AccountInfo.Rating switch
         {
             < 0     => "off",
+            >= 1300 => "7",
             >= 1250 => "6",
             >= 1200 => "5",
             >= 1100 => "4",

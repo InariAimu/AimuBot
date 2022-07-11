@@ -13,11 +13,18 @@ namespace AimuBot.Modules.Arcaea;
 
 [Module("Arcaea",
     Command = "ac",
-    Description = "提供Arcaea查分，b30，谱面预览等功能。使用`ac`与其他Bot的`arc`等进行区分，避免一呼百应。同时适量增加操作成本，防止滥用。",
+    CommandDesc = "Arcaea 模块中大部分命令均以该命令起始。如果不指定任何参数，该功能的行为相当于 [Recent查询](#recent-查询)。",
+    Description =
+        "提供 Arcaea 查分，b30，谱面预览等功能。使用 `ac` 与其他 Bot 的 `arc`，`a` 等进行区分，避免一呼百应。同时适量增加操作成本，防止滥用。\n" +
+        "**使用大部分功能之前，请先使用 `/ac bind` 绑定一个 arcaea id。**\n"+
+        "::: warning 注意\nArcaea 是 Lowiro 的注册商标。商标是其各自所有者的财产。游戏材料的版权归 Lowiro 所有。Lowiro 没有认可也不对本网站或其内容负责。\n:::\n",
     Eula =
-        "您应知悉，使用本模块进行Arcaea查分将违反*Arcaea使用条款 3.2-4 和 3.2-6*，以及*Arcaea二次创作管理条例*。\n因使用本功能而造成的损失（包括但不限于账号被lowiro封禁、shadowban等），Aimubot开发组不予承担任何责任。",
+        "您应知悉，使用本模块进行 Arcaea 查分将违反 *Arcaea使用条款 3.2-4 和 3.2-6*，以及 *Arcaea二次创作管理条例*。\n" +
+        "因使用本功能进行查分而造成的损失（包括但不限于账号被 lowiro 封禁、shadowban 等），Aimubot 开发组不予承担任何责任。",
     Privacy =
-        "使用查分将默认您允许Aimubot收集/记录关于您的使用记录，包括且不限于Arcaea用户名、游玩记录等。\n您的数据将用于历史ptt显示、推分建议等功能。\n我们将使用行业安全标准来保存数据并不会提供给任何第三方。")]
+        "使用查分将默认您允许 Aimubot 收集/记录关于您的使用记录，包括但不限于 Arcaea 用户名、游玩记录等。\n" +
+        "您的数据将用于历史 ptt 显示、最高分记录显示、推分建议等功能。\n" +
+        "我们将使用行业安全标准来保存数据，并不会提供给任何第三方。")]
 public partial class Arcaea : ModuleBase
 {
     private ArcaeaDatabase _db = null!;
@@ -43,8 +50,10 @@ public partial class Arcaea : ModuleBase
     [Command("acs",
         Name = "保存分数",
         Description = "在不查询或无法查询成绩时保存分数",
-        Tip = "/acs <song_name> [difficulty=ftr] <score>",
-        Example = "/acs tempestissimo byd 10001540",
+        BlocksBefore = new[]
+            { "::: warning 注意\n仅用于无法查分时在 bot 数据库中手动保存您的成绩，请谨慎使用。\n:::" },
+        Template = "/acs <song_name> [difficulty=ftr] <score>",
+        Example = "/acs testify byd 10002221",
         Category = "Arcaea",
         State = State.Test,
         Matching = Matching.StartsWith,
@@ -52,10 +61,12 @@ public partial class Arcaea : ModuleBase
     public MessageChain OnStoreLocalScore(BotMessage msg)
     {
         var content = msg.Content;
-        var param_arr = content.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        ScoreDesc sd = new();
-        sd.Type = 1;
-        sd.Difficulty = 2;
+        var paramArr = content.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        ScoreDesc sd = new()
+        {
+            Type = 1,
+            Difficulty = 2
+        };
 
         var m = new Regex(@"\s\d{8}").Match(content);
         if (!m.Success)
@@ -95,8 +106,8 @@ public partial class Arcaea : ModuleBase
 
     [Command("ac bind",
         Name = "绑定 Arcaea",
-        Description = "绑定 ArcaeaId 或 Name（推荐使用数字 id）",
-        Tip = "/ac bind <arc_id>",
+        Description = "绑定 Arcaea Id 或 Name（推荐使用 9 位 Arcaea 数字 id）",
+        Template = "/ac bind <arc_id>",
         Example = "/ac bind ToasterKoishi\n/ac bind 000000001",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
@@ -107,29 +118,29 @@ public partial class Arcaea : ModuleBase
         var content = msg.Content;
         LogMessage($"Bind: {content} -> {msg.SenderId}");
 
-        Regex arc_id_regex = new(@"^\d{9}$");
-        Regex arc_name_regex = new(@"^[A-Za-z\d_]+$");
+        Regex arcIdRegex = new(@"^\d{9}$");
+        Regex arcNameRegex = new(@"^[A-Za-z\d_]+$");
 
-        if (arc_id_regex.IsMatch(content) || arc_name_regex.IsMatch(content))
+        if (arcIdRegex.IsMatch(content) || arcNameRegex.IsMatch(content))
         {
             var response = await GetUserRecent(content);
             if (response.Status < 0)
                 return $"错误：{response.Status} {response.Message}";
 
-            var (succ, bind_info) = _db.GetObject<BindInfoDesc>(
+            var (succ, bindInfo) = _db.GetObject<BindInfoDesc>(
                 "arc_id = $arc_id",
                 new Dictionary<string, object> { { "$arc_id", response.Content.AccountInfo.Code } }
             );
             if (succ)
             {
-                bind_info.BindType = 0;
-                bind_info.QqId = msg.SenderId;
-                bind_info.ArcId = content;
-                bind_info.Name = response.Content.AccountInfo.Name;
+                bindInfo.BindType = 0;
+                bindInfo.QqId = msg.SenderId;
+                bindInfo.ArcId = content;
+                bindInfo.Name = response.Content.AccountInfo.Name;
             }
             else
             {
-                bind_info = new BindInfoDesc
+                bindInfo = new BindInfoDesc
                 {
                     BindType = 0,
                     QqId = msg.SenderId,
@@ -140,7 +151,7 @@ public partial class Arcaea : ModuleBase
                 };
             }
 
-            _db.SaveObject(bind_info);
+            _db.SaveObject(bindInfo);
             return
                 $"已绑定 {response.Content.AccountInfo.Name}/{response.Content.AccountInfo.Code} ({response.Content.AccountInfo.PttText})";
         }
@@ -152,10 +163,12 @@ public partial class Arcaea : ModuleBase
 
     [Command("ac chart",
         Name = "谱面预览",
-        Description = "获取2d谱面预览",
-        Tip = "/ac chart <song_name> [difficulty=ftr]",
-        Example = "/ac chart 猫魔王 byd\n/ac chart dropdead pst\nac chart ifi",
+        Description = "获取指定谱面的平面预览图。",
+        BlocksBefore = new[] { "::: warning 注意\n`Final Verdict` 中的一些谱面目前渲染不正常，正在修复中。\n:::" },
+        Template = "/ac chart <song_name> [difficulty=ftr]",
+        Example = "/ac chart 猫魔王 byd\n/ac chart dropdead pst\n/ac chart ifi",
         Category = "Arcaea",
+        State = State.Test,
         Matching = Matching.StartsWith,
         Level = RbacLevel.Normal,
         SendType = SendType.Send)]
@@ -209,7 +222,7 @@ public partial class Arcaea : ModuleBase
                     Difficulty = diff,
                     Rating = GetRating(name, diff),
                     Notes = GetNotes(name, diff),
-                    IsMirror = false,
+                    IsMirror = false
                 };
 
                 var bg = $"arcaea/assets/img/bg/{s.GetBg(diff)}.jpg";
@@ -238,8 +251,9 @@ public partial class Arcaea : ModuleBase
                     return new MessageBuilder(ImageChain.Create(path)).Build();
                 else
                     BotLogger.LogE("ArcChart", "未找到 Aff 文件或渲染出错。");
-                    //return "[Aff2Preview] 未找到 Aff 文件或渲染出错。";
-                    return "";
+
+                //return "[Aff2Preview] 未找到 Aff 文件或渲染出错。";
+                return "";
             }
             else
             {
@@ -249,6 +263,7 @@ public partial class Arcaea : ModuleBase
         catch (Exception ex)
         {
             BotLogger.LogE("ArcChart", $"{ex.Message}\n{ex.StackTrace}");
+
             //return $"[Aff2Preview] 解析出错: {ex.Message}";
             return "";
         }

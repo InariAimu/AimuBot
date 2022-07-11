@@ -17,43 +17,61 @@ public partial class Arcaea : ModuleBase
 {
     [Command("ac test",
         Name = "test",
-        Tip = "/ac test",
+        Template = "/ac test <song_id>",
         Description = "Arcaea 测试功能",
         Level = RbacLevel.Super,
-        Matching = Matching.Full,
+        Matching = Matching.Exact,
         SendType = SendType.Send)]
     public MessageChain OnArcTest(BotMessage msg)
     {
-        var songId = "ifi";
+        var songId = msg.Content;
         Task.Run(async () =>
         {
-            await GetSongDist(songId, 2);
+            await GetSongDist(songId, 3);
             await msg.Bot.SendGroupMessageImage(msg.SubjectId, BotUtil.CombinePath($"Arcaea/songstat/{songId}.jpg"));
         });
         return "";
     }
 
+    [Command("ac test2",
+        Name = "test2",
+        Template = "/ac test2",
+        Description = "Arcaea 测试功能2",
+        Level = RbacLevel.Super,
+        Matching = Matching.Exact,
+        SendType = SendType.Send)]
+    public MessageChain OnArcTest2(BotMessage msg) => GetAllSongInfoFromAua();
+
+    [Command("ac test3",
+        Name = "test3",
+        Template = "/ac test3",
+        Description = "Arcaea 测试功能3",
+        Level = RbacLevel.Super,
+        Matching = Matching.Exact,
+        SendType = SendType.Send)]
+    public async Task<MessageChain> OnArcTest3(BotMessage msg) => await GetAllSongAliasFromBotAua();
+
     private async Task GetSongDist(string songId, int difficulty)
     {
-        var startPtt = 988;
-        var endPtt = 1288;
+        var startPtt = 1004;
+        var endPtt = 1304;
         var YSegments = 50;
         var dy = (endPtt - startPtt) / YSegments;
         var XSegments = 100;
         var dx = 1;
 
         Image im = new Bitmap(1000, 500);
-        using Graphics g = Graphics.FromImage(im);
+        using var g = Graphics.FromImage(im);
         g.SmoothingMode = SmoothingMode.HighQuality;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 
         g.Clear(Color.White);
 
 
-        Pen p = new Pen(Color.Aqua);
+        var p = new Pen(Color.Aqua);
         p.Width = 1;
         var ft = new Font("Exo", 12, FontStyle.Regular);
-        SolidBrush sb = new SolidBrush(Color.Black);
+        var sb = new SolidBrush(Color.Black);
 
         var drawScoreLine = (int rating) =>
         {
@@ -83,7 +101,7 @@ public partial class Arcaea : ModuleBase
         drawPttLine(1100);
         drawPttLine(1000);
 
-        SolidBrush b = new SolidBrush(Color.Green);
+        var b = new SolidBrush(Color.Green);
 
         for (var i = 0; i < YSegments; i++)
         {
@@ -108,7 +126,7 @@ public partial class Arcaea : ModuleBase
                 if (item is null)
                     continue;
 
-                Color cellColor = Color.FromArgb(240 * item.Count / maxCount + 15, Color.Green);
+                var cellColor = Color.FromArgb(240 * item.Count / maxCount + 15, Color.Green);
                 b.Color = cellColor;
                 g.FillRectangle(b, j * 10, 500 - 10 - i * 10, 10, 10);
             }
@@ -143,18 +161,15 @@ public partial class Arcaea : ModuleBase
         });
         return $"Arctest: {Enumerable.Sum<ArcaeaSongRaw>(_songInfoRaw.Songs.SongList, x => x.Difficulties.Count)}";
     }
-    
-    public void GetAllSongAliasFromBotArcApi()
+
+    private async Task<string> GetAllSongAliasFromBotAua()
     {
         foreach (var s in _songInfoRaw.Songs.SongList)
         {
             if (_arcaeaNameAlias.IsNameExist(s.Id))
                 continue;
 
-            var sr = GetFromBotArcApi($"song/alias?songid={s.Id}");
-            sr.Wait();
-
-            var json = sr.Result;
+            var json = await GetFromBotArcApi($"song/alias?songid={s.Id}");
 
             Console.Write((string?)s.Id);
 
@@ -168,7 +183,9 @@ public partial class Arcaea : ModuleBase
 
             Console.WriteLine();
 
-            Thread.Sleep(500);
+            await Task.Delay(500);
         }
+
+        return "";
     }
 }

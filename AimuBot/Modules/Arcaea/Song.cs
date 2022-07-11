@@ -10,18 +10,36 @@ public partial class Arcaea : ModuleBase
     [Command("ac alias",
         Name = "查询别名",
         Description = "查询别名",
-        Tip = "/ac alias <song_name>",
-        Example = "/acs alias 妙脆角",
+        Template = "/ac alias <song_name>",
+        Example = "/ac alias 妙脆角",
         Category = "Arcaea",
-        State = State.Developing,
+        State = State.Test,
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
-    public MessageChain OnGetAlias(BotMessage msg) => "";
+    public MessageChain OnGetAlias(BotMessage msg)
+    {
+        var songRaw = GetSongByKeyword(msg.Content);
+        if (songRaw is null)
+            return "";
+
+        var alias = _arcaeaNameAlias.GetAlias(songRaw.Id);
+
+        var (titleEn, titleJp) = songRaw.GetTitle();
+        var tt = titleJp is null ? titleEn : titleJp;
+        var s = $"[{tt}]\n";
+
+        for (var i = 0; i < alias.Length; i++) s += $"[{i + 1}] {alias[i]}\n";
+
+        var mb = new MessageBuilder();
+        mb.Add(ImageChain.Create($"{songRaw.GetCover()[..^4]}_256.jpg")).Add(TextChain.Create(s));
+
+        return mb.Build();
+    }
 
     [Command("ac adda",
         Name = "添加别名",
-        Description = "添加别名",
-        Tip = "/ac adda <song_name>/<alias>[</|\\|_|,|\\n|，>alias]...",
+        Description = "为指定歌曲添加别名。分隔符可以为 `</|\\|_|,|\\n|，>` 中的任意一个（建议使用 `，`）",
+        Template = "/ac adda <song_name>/<alias>[</|\\|_|,|\\n|，>alias]...",
         Example = "/ac adda tempestissimo/风暴，妙脆角，猫魔王，我没有买外卖",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
@@ -43,9 +61,9 @@ public partial class Arcaea : ModuleBase
     }
 
     [Command("ac song",
-        Name = "查询歌曲",
-        Description = "查询歌曲",
-        Tip = "/ac song <song_name>",
+        Name = "查询歌曲信息",
+        Description = "查询歌曲信息，包括曲绘、定数等（可使用别名查询）",
+        Template = "/ac song <song_name>",
         Example = "/ac song tempestissimo\n/ac song 我没有买外卖",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
@@ -63,8 +81,10 @@ public partial class Arcaea : ModuleBase
                 $"Pack: {song_raw.Set}\n" +
                 $"BPM: {song_raw.Bpm}\n";
 
-        var ratings = Enumerable.Select<ArcaeaSongDifficultyRaw, float>(song_raw.Difficulties, x => GetRating(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
-        var notes = Enumerable.Select<ArcaeaSongDifficultyRaw, int>(song_raw.Difficulties, x => GetNotes(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
+        var ratings = Enumerable.Select<ArcaeaSongDifficultyRaw, float>(song_raw.Difficulties,
+            x => GetRating(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
+        var notes = Enumerable.Select<ArcaeaSongDifficultyRaw, int>(song_raw.Difficulties,
+            x => GetNotes(song_raw.Id, song_raw.Difficulties.IndexOf(x)));
 
         var ratingStrs = song_raw.Difficulties.Select(x => song_raw.GetGameRatingStr(song_raw.Difficulties.IndexOf(x)));
 

@@ -40,7 +40,7 @@ internal class Biaoqingbao : ModuleBase
     [Command("",
         Name = "表情包",
         Description = "获取指定表情包图片",
-        Tip = "/<name> [id]",
+        Template = "/<name> [id]",
         Example = "/care\n/care 10",
         Matching = Matching.Any,
         CooldownType = CooldownType.Group,

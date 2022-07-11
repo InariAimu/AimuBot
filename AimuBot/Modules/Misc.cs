@@ -25,8 +25,8 @@ internal class Misc : ModuleBase
 {
     [Command("mmmm",
         Name = "生成猫猫语",
-        Description = "将一段话按照拼音声调替换为喵苗秒妙。",
-        Tip = "/mmmm <content>\n/喵苗秒妙 <content>",
+        Description = "将一段话按照拼音声调替换为*喵苗秒妙*。",
+        Template = "/mmmm <content>\n/喵苗秒妙 <content>",
         Example = "/mmmm 喵",
         Alias = new string[] { "喵苗秒妙" },
         Category = "杂项",
@@ -62,7 +62,7 @@ internal class Misc : ModuleBase
     [Command("guy",
         Name = "生成Guy发言",
         Description = "生成Guy先生的Discord发言。",
-        Tip = "/guy <content>",
+        Template = "/guy <content>",
         Example = "/guy 616sb",
         CooldownType = CooldownType.Bot,
         CooldownSecond = 15,
@@ -75,10 +75,10 @@ internal class Misc : ModuleBase
 
         if (content.Length > 256)
             return "";
-        
+
         if (new Regex(@"^\s+$").IsMatch(content))
             return "";
-        
+
         if (BotUtil.Timestamp < _guyLock + 15 * 1000)
             return "";
 
@@ -115,7 +115,7 @@ internal class Misc : ModuleBase
     [Command("roll",
         Name = "帮您选择",
         Description = "从几个选项中选择一个。",
-        Tip = "/roll <option>[< |,|，><option>]...",
+        Template = "/roll <option>[< |,|，><option>]...",
         Example = "/roll fktx fkucn fk616\n/roll 肯德基，麦当劳，不吃",
         Category = "杂项",
         NeedSensitivityCheck = true,
@@ -132,7 +132,7 @@ internal class Misc : ModuleBase
         {
             "那我建议你选择<option>",
             "我觉得还是选<option>吧",
-            "不如选<option>",
+            "不如选<option>"
         };
 
         var op = new Random().Next(0, tip.Length);
@@ -141,9 +141,9 @@ internal class Misc : ModuleBase
     }
 
     [Command("https://github.com/",
-        Name = "Github repo parser",
-        Description = "将 Github repo url 链接解析为图片",
-        Tip = "<Github_repo_url>",
+        Name = "Github parser",
+        Description = "将 Github url 链接解析为图片（适用于repo,issue等）",
+        Template = "<Github_repo_url>",
         Example = "https://github.com/KonataDev/Konata.Core",
         Category = "杂项",
         Matching = Matching.StartsWithNoLeadChar,

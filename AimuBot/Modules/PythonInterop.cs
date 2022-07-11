@@ -10,7 +10,7 @@ namespace AimuBot.Modules;
 
 [Module("PythonInterop",
     Command = "",
-    Description = "一些Python功能")]
+    Description = "一些 Python 功能")]
 internal class PythonInterop : ModuleBase
 {
     [Config("asm_file", DefaultValue = "keystone_module.py")]
@@ -24,8 +24,8 @@ internal class PythonInterop : ModuleBase
 
     [Command("py-asm",
         Name = "汇编（arm）",
-        Description = "Arm汇编",
-        Tip = "/py-asm <asm_code>",
+        Description = "Arm 汇编",
+        Template = "/py-asm <asm_code>",
         Example = "/py-asm\nIT AL\nNOP",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
@@ -40,8 +40,8 @@ internal class PythonInterop : ModuleBase
 
     [Command("py-dasm",
         Name = "反汇编（arm）",
-        Description = "Arm反汇编\nT/A:Thumb/Arm\n</>:大小端序",
-        Tip = "/py-dasm [T|A][<|>] <base_addr>\n<asm_hexcode>",
+        Description = "Arm 反汇编\nT/A: Thumb/Arm\n</>: 大小端序\nbase_addr: 基地址\nasm_hexcode: 机器码",
+        Template = "/py-dasm [T|A][<|>] <base_addr>\n<asm_hexcode>",
         Example = "/py-dasm T<\n1A 0C",
         Matching = Matching.StartsWith,
         Level = RbacLevel.Normal,

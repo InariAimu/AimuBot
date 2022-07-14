@@ -9,9 +9,11 @@ public partial class Arcaea : ModuleBase
 {
     [Command("ac alias",
         Name = "查询别名",
-        Description = "查询别名",
+        Description = "查询某歌曲的别名。",
         Template = "/ac alias <song_name>",
-        Example = "/ac alias 妙脆角",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac alias 妙脆角' }," +
+            "{ position: 'left', chain: [ { reply: '/ac alias 妙脆角' }, { img: '/images/Arcaea/t.webp' }, { msg: '[Tempestissimo]\\n[1] 奥运会\\n[2] 妙脆角\\n[3] 对立打电话\\n[4] 对立点外卖\\n[5] 我没有买外卖\\n[6] 我要杀光光\\n[7] 暴风雨\\n[8] 猫对立\\n[9] 猫魔王\\n[10] 电话拨号\\n[11] 电话来啰\\n[12] 风暴' } ] },",
         Category = "Arcaea",
         State = State.Test,
         Matching = Matching.StartsWith,
@@ -40,7 +42,9 @@ public partial class Arcaea : ModuleBase
         Name = "添加别名",
         Description = "为指定歌曲添加别名。分隔符可以为 `</|\\|_|,|\\n|，>` 中的任意一个（建议使用 `，`）",
         Template = "/ac adda <song_name>/<alias>[</|\\|_|,|\\n|，>alias]...",
-        Example = "/ac adda tempestissimo/风暴，妙脆角，猫魔王，我没有买外卖",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac adda tempestissimo/风暴，妙脆角，猫魔王，我没有买外卖' }," +
+            "{ position: 'left', chain: [ { reply: '/ac adda tempestissimo/风暴，妙脆角，猫魔王，我没有买外卖' }, { msg: '[Tempestissimo]\\nAdded 4 records.' } ] },",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
@@ -64,7 +68,9 @@ public partial class Arcaea : ModuleBase
         Name = "查询歌曲信息",
         Description = "查询歌曲信息，包括曲绘、定数等（可使用别名查询）",
         Template = "/ac song <song_name>",
-        Example = "/ac song tempestissimo\n/ac song 我没有买外卖",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac alias 猫光' }," +
+            "{ position: 'left', chain: [ { reply: '/ac alias 猫光' }, { img: '/images/Arcaea/t2.webp' }, { msg: '[Testify]\\nArtist: void (Mournfinale) feat. 星熊南巫\\nPack: finale\\nBPM: 178\\nRatings: 7 | 9.4 | 10.8 | 12' } ] },",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]

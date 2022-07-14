@@ -14,9 +14,16 @@ public partial class Arcaea : ModuleBase
         Name = "Aua 排名查询",
         Description = "查询您在 ptt 接近的玩家中的排名情况。可用来分析是否虚高或虚低。",
         BlocksBefore = new[]
-            { "::: warning 注意\n**此命令会占用大量查分资源，请勿滥用**，可能需要较长时间响应，不要重复查询。\n:::" },
+        {
+            "::: warning 注意\n**此命令会占用大量查分资源，请勿滥用**，可能需要较长时间响应，不要重复查询。\n" +
+            "此结果仅表明您在**使用 Aua 查过分的玩家**中的排名，不反映真实的排行榜数据，因此可能偏低。仅供参考。\n:::"
+        },
         Template = "/acc [<song_name> [difficulty=ftr]]",
-        Example = "/acc\n/acc 骨折光\n/acc 风暴 byd",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/acc' }," +
+            "{ position: 'left', chain:[ {'reply': '/acc'}, { msg: 'specta 2 9316448 8.89\\nYour ptt: 10.50\\nAua play rank in 10.40~10.60: #197/208 (top 94.71%)\\nAua play rank in 10.00~11.00: #1010/1066 (top 94.75%)' }] }," +
+            "{ position: 'right', msg: '/acc vividtheory' }," +
+            "{ position: 'left', chain:[ {'reply': '/acc vividtheory'}, { msg: 'vividtheory 2 10000850 10.80\\nYour ptt: 10.50\\nAua play rank in 10.40~10.60: #1/460 (top 0.22%)\\nAua play rank in 10.00~11.00: #1/2184 (top 0.05%)' }] },",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         Level = RbacLevel.Normal,

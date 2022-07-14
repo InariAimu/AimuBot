@@ -20,7 +20,9 @@ public partial class Arcaea : ModuleBase
         Name = "定数表查询",
         Description = "列出指定定数以及 ±0.1 范围的所有谱面（如果存在），当定数 ≤8.0 时为 ±0.5。",
         Template = "/ac rating <rating>\n/ac r <rating>",
-        Example = "/ac rating 9.9\n/ac r 11.4",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac rating 9.8' }," +
+            "{ position: 'left', chain: [ { reply: '/ac rating 9.8' }, { img: '/images/Arcaea/rating.webp' } ] },",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]

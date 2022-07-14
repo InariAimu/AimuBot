@@ -16,7 +16,7 @@ namespace AimuBot.Modules.Arcaea;
     CommandDesc = "Arcaea 模块中大部分命令均以该命令起始。如果不指定任何参数，该功能的行为相当于 [Recent查询](#recent-查询)。",
     Description =
         "提供 Arcaea 查分，b30，谱面预览等功能。使用 `ac` 与其他 Bot 的 `arc`，`a` 等进行区分，避免一呼百应。同时适量增加操作成本，防止滥用。\n" +
-        "**使用大部分功能之前，请先使用 `/ac bind` 绑定一个 arcaea id。**\n"+
+        "**使用大部分功能之前，请先使用 `/ac bind` 绑定一个 arcaea id。**\n" +
         "::: warning 注意\nArcaea 是 Lowiro 的注册商标。商标是其各自所有者的财产。游戏材料的版权归 Lowiro 所有。Lowiro 没有认可也不对本网站或其内容负责。\n:::\n",
     Eula =
         "您应知悉，使用本模块进行 Arcaea 查分将违反 *Arcaea使用条款 3.2-4 和 3.2-6*，以及 *Arcaea二次创作管理条例*。\n" +
@@ -55,7 +55,7 @@ public partial class Arcaea : ModuleBase
         Template = "/acs <song_name> [difficulty=ftr] <score>",
         Example = "/acs testify byd 10002221",
         Category = "Arcaea",
-        State = State.Test,
+        State = State.Developing,
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]
     public MessageChain OnStoreLocalScore(BotMessage msg)
@@ -96,7 +96,7 @@ public partial class Arcaea : ModuleBase
         if (song is null)
             return "";
 
-        var rating_f = GetRating(songId, sd.Difficulty);
+        var ratingF = GetRating(songId, sd.Difficulty);
 
         sd.time = BotUtil.Timestamp;
 
@@ -108,7 +108,9 @@ public partial class Arcaea : ModuleBase
         Name = "绑定 Arcaea",
         Description = "绑定 Arcaea Id 或 Name（推荐使用 9 位 Arcaea 数字 id）",
         Template = "/ac bind <arc_id>",
-        Example = "/ac bind ToasterKoishi\n/ac bind 000000001",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac bind 559842662' }," +
+            "{ position: 'left', chain: [{ reply: '/ac bind 559842662' }, { msg: '已绑定 InariAimu/559842662 (12.92)' } ] },",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         Level = RbacLevel.Normal,
@@ -166,7 +168,9 @@ public partial class Arcaea : ModuleBase
         Description = "获取指定谱面的平面预览图。",
         BlocksBefore = new[] { "::: warning 注意\n`Final Verdict` 中的一些谱面目前渲染不正常，正在修复中。\n:::" },
         Template = "/ac chart <song_name> [difficulty=ftr]",
-        Example = "/ac chart 猫魔王 byd\n/ac chart dropdead pst\n/ac chart ifi",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac chart 妙脆角 byd' }," +
+            "{ position: 'left', chain: [{ img: '/images/Arcaea/tempestissimo_3.webp' } ] },",
         Category = "Arcaea",
         State = State.Test,
         Matching = Matching.StartsWith,

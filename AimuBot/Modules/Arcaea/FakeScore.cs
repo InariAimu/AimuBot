@@ -12,9 +12,11 @@ public partial class Arcaea : ModuleBase
     [Command("ac yyw b30",
         Name = "音游王生成（b30）",
         Description = "生成一张音游王 b30 成绩图（即最高理论 ptt 值）",
-        BlocksBefore = new[] { "::: warning 注意\n请勿滥用\n:::" },
+        BlocksBefore = new[] { "::: warning 注意\n请勿滥用。此功能仅用于 recent 模板测试，不要真去当 yyw.jpg。滥用造成的后果由且仅由您个人承担。\n:::" },
         Template = "/ac yyw b30",
-        Example = "/ac yyw b30",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac yyw b30' }," +
+            "{ position: 'left', chain: [ { reply: '/ac yyw b30' }, { img: '/images/Arcaea/yywb30.webp' } ] },",
         Category = "Arcaea",
         Matching = Matching.Exact,
         SendType = SendType.Reply)]
@@ -87,10 +89,12 @@ public partial class Arcaea : ModuleBase
 
     [Command("ac yyw",
         Name = "音游王生成",
-        Description = "生成指定谱面的理论值成绩图",
-        BlocksBefore = new[] { "::: warning 注意\n请勿滥用\n:::" },
+        Description = "生成指定谱面的理论值成绩图。",
+        BlocksBefore = new[] { "::: warning 注意\n请勿滥用。此功能仅用于 recent 模板测试，不要真去当 yyw.jpg。滥用造成的后果由且仅由您个人承担。\n:::" },
         Template = "/ac yyw <song_name> [difficulty=ftr]",
-        Example = "/ac yyw 猫光 byd\n/ac yyw 病女",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac yyw 猫光 byd' }," +
+            "{ position: 'left', chain: [ { reply: '/ac yyw 猫光 byd' }, { img: '/images/Arcaea/yyw.webp' } ] },",
         Category = "Arcaea",
         Matching = Matching.StartsWith,
         SendType = SendType.Reply)]

@@ -1,47 +1,80 @@
-﻿using AimuBot.Core.Extensions;
+﻿using System.Text;
+
+using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
 using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
+using AimuBot.Data;
+
+using JetBrains.Annotations;
 
 using Newtonsoft.Json;
 
 namespace AimuBot.Modules;
 
+internal class BqbNameAlias : NameAliasSystem
+{
+    public BqbNameAlias() : base("biaoqingbao")
+    {
+    }
+}
+
 [Module("表情包",
     Command = "")]
 internal class Biaoqingbao : ModuleBase
 {
-    private readonly string _confFile = BotUtil.CombinePath("表情包/NameAlias.jsom");
-
-    private Dictionary<string, List<string>> _imageAlias = new();
+    private readonly BqbNameAlias _nameAlias = new();
+    
+    private Dictionary<string, List<string>?> _imageAlias = new();
     private readonly string _imgPath = BotUtil.CombinePath("表情包/");
 
     public override bool OnReload()
     {
-        if (File.Exists(_confFile))
+        _nameAlias.CreateTable();
+        
+        DirectoryInfo di = new(_imgPath);
+        foreach (var d in di.GetDirectories())
         {
-            _imageAlias = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(File.ReadAllText(_confFile));
-            DirectoryInfo di = new(_imgPath);
-            foreach (var d in di.GetDirectories())
-                if (!_imageAlias.ContainsKey(d.Name))
-                    _imageAlias.Add(d.Name, new List<string>());
+            var na = _nameAlias.GetAlias(d.Name);
+            _imageAlias.TryAdd(d.Name, na?.ToList());
         }
-        else
-        {
-            DirectoryInfo di = new(_imgPath);
-            foreach (var d in di.GetDirectories()) _imageAlias.Add(d.Name, new List<string>());
-            File.WriteAllText(_confFile, JsonConvert.SerializeObject(_imageAlias));
-        }
-
         return true;
     }
 
+    [UsedImplicitly]
+    public string OnRequestImage_Doc()
+    {
+        StringBuilder sb = new();
+        sb.AppendLine("可用表情包列表：（通过名称和别名均可获取）");
+        sb.AppendLine();
+        sb.AppendLine("| 名称 | 别名 |");
+        sb.AppendLine("|:-----|:-----|");
+        foreach (var (k, v) in _imageAlias)
+        {
+            var s = v is null ? string.Empty : string.Join(", ", v);
+            sb.AppendLine($"| {k} | {s} |");
+        }
+
+        sb.AppendLine();
+        return sb.ToString();
+    }
+    
     [Command("",
         Name = "表情包",
-        Description = "获取指定表情包图片",
+        Description = "获取随机或指定的表情包图片。",
         Template = "/<name> [id]",
-        Example = "/care\n/care 10",
+        DescCustomFunc = "OnRequestImage_Doc",
+        BlocksBefore = new []
+        {
+            "::: tip 注意\n表情包功能内图片收集自网络；其版权归各自作者所有。有鉴于这些图片：\n\n- 公开流通于网络\n- 非盈利/非商业性使用\n\n"+
+            "故在 AimuBot 中提供用于表情包功能。如您将其用于其他用途可能构成侵犯著作权。 AimuBot 开发组对您的行为不予承担任何责任。\n:::"
+        },
+        NekoBoxExample = 
+            "{ position: 'right', msg: '/arcaea' },"+
+            "{ position: 'left', chain: [{ img: '/images/Biaoqingbao/10.jpg' },] },"+
+            "{ position: 'right', msg: '/llmmt 13' },"+
+            "{ position: 'left', chain: [{ img: '/images/Biaoqingbao/13.jpg' },] },",
         Matching = Matching.Any,
         CooldownType = CooldownType.Group,
         CooldownSecond = 5,

@@ -98,7 +98,10 @@ public partial class Arcaea : ModuleBase
         Name = "指定玩家 Recent 查询",
         Description = "获取指定玩家最近一次游玩成绩",
         Template = "/ac usr <arc_id>",
-        Example = "/ac usr ToasterKoishi\n/ac usr 582325489",
+        Example = "/ac usr SkisK49\n/ac usr 582325489",
+        NekoBoxExample =
+            "{ position: 'right', msg: '/ac usr SkisK49' }," +
+            "{ position: 'left', chain: [ { reply: '/ac usr SkisK49' }, { img: '/images/Arcaea/SkisK49.webp' } ] },",
         Category = "Arcaea",
         CooldownType = CooldownType.User,
         CooldownSecond = 10,
@@ -345,6 +348,12 @@ public partial class Arcaea : ModuleBase
             ui.GetNodeByPath<LuiText>("top_bar/user_info/ptt_bg/ptt_int").Text = content.AccountInfo.Rating / 100 + ".";
             ui.GetNodeByPath<LuiText>("top_bar/user_info/ptt_bg/ptt_tail").Text =
                 (content.AccountInfo.Rating % 100).ToString("D2");
+
+            if (content.AccountInfo.Rating >= 1300)
+            {
+                ui.GetNodeByPath<LuiText>("top_bar/user_info/ptt_bg/ptt_int").BorderColor = Color.FromArgb(84, 5, 37);
+                ui.GetNodeByPath<LuiText>("top_bar/user_info/ptt_bg/ptt_tail").BorderColor = Color.FromArgb(84, 5, 37);
+            }
         }
         else
         {
@@ -380,7 +389,7 @@ public partial class Arcaea : ModuleBase
             new Dictionary<string, object> { { "$arc_id", arcId } }
         );
         string pttDiff;
-        if (lastPttInfos != null && lastPttInfos.Length > 0)
+        if (lastPttInfos is { Length: > 0 })
         {
             double pttDiffD = 0;
             if (lastPttInfos[0].Time == playInfo.TimePlayed)

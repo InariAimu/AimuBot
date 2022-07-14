@@ -26,7 +26,8 @@ public enum State
     Normal,
     Test,
     Developing,
-    DisableByDefault
+    DisableByDefault,
+    Disabled,
 }
 
 public enum CooldownType
@@ -50,6 +51,8 @@ public class CommandAttribute : Attribute
     public string[]? BlocksBefore { get; set; } = null;
     public string Template { get; set; } = "";
     public string Example { get; set; } = "";
+    public string NekoBoxExample { get; set; } = "";
+    public string DescCustomFunc { get; set; } = "";
     public bool NeedSensitivityCheck { get; set; }
     public CooldownType CooldownType { get; set; } = CooldownType.None;
     public int CooldownSecond { get; set; }

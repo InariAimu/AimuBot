@@ -36,10 +36,7 @@ public class ArcaeaSongRaw
 
     public string GetArtistFont()
     {
-        if (new Regex(@"^[A-Za-z\d\s\.\(\)]+$").IsMatch(Artist))
-            return "Noto Sans CJK SC Regular";
-        else
-            return "Kazesawa Regular";
+        return new Regex(@"^[A-Za-z\d\s\.\(\)]+$").IsMatch(Artist) ? "Noto Sans CJK SC Regular" : "Kazesawa Regular";
     }
 
     public string GetGameRatingStr(int difficulty)

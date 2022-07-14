@@ -32,7 +32,10 @@ internal class Information : ModuleBase
     [Command("ping",
         Name = "Ping！",
         Template = "/ping",
-        Description = "检查 bot 在线状态",
+        Description = "检查 bot 在线状态。回复可能是 Konata, Kagami, Tsukasa, Miyuki 中的任意一个。",        
+        NekoBoxExample = 
+            "{ position: 'right', msg: '/ping' },"+
+            "{ position: 'left', msg: 'Hello, I\\'m Kagami' },",
         Matching = Matching.Exact,
         SendType = SendType.Send)]
     public async Task<MessageChain> OnPing(BotMessage msg)

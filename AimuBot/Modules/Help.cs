@@ -134,27 +134,37 @@ public class Help : ModuleBase
 
                 if (c.State is not State.Normal)
                 {
-                    var stateStr = c.State switch
+                    var (typeStr, stateStr) = c.State switch
                     {
-                        State.Test             => "测试中",
-                        State.Developing       => "开发中",
-                        State.DisableByDefault => "默认关闭",
-                        _                      => ""
+                        State.Test             => ("warning", "测试中"),
+                        State.Developing       => ("warning", "开发中"),
+                        State.DisableByDefault => ("warning", "默认关闭"),
+                        State.Disabled         => ("danger", "关闭"),
+                        _                      => ("", "")
                     };
-                    sb.Append($" <Badge type=\"warning\" text=\"{stateStr}\" vertical=\"top\" />");
+                    sb.Append($" <Badge type=\"{typeStr}\" text=\"{stateStr}\" vertical=\"top\" />");
                 }
 
                 sb.AppendLine();
                 sb.AppendLine();
-
-
+                
                 sb.AppendLine(c.Description.Replace("\n", "\n\n"));
                 sb.AppendLine();
+
+                foreach (var methodInfo in methods)
+                {
+                    if (methodInfo.Name != c.DescCustomFunc || methodInfo.ReturnType != typeof(string))
+                        continue;
+
+                    var customDesc = methodInfo.Invoke(m, null) as string;
+                    sb.AppendLine(customDesc ?? "");
+                    sb.AppendLine();
+                }
 
                 if (c.BlocksBefore != null)
                     foreach (var block in c.BlocksBefore)
                     {
-                        sb.AppendLine(block.Replace("\n", "\n\n"));
+                        sb.AppendLine(block);
                         sb.AppendLine();
                     }
 
@@ -168,13 +178,24 @@ public class Help : ModuleBase
                     sb.AppendLine();
                 }
 
-                if (c.Example.IsNotEmpty())
+                if (c.NekoBoxExample.IsNullOrEmpty() && c.Example.IsNotEmpty())
                 {
                     sb.AppendLine("示例：");
                     sb.AppendLine();
                     sb.AppendLine("```text");
                     sb.AppendLine(c.Example);
                     sb.AppendLine("```");
+                    sb.AppendLine();
+                }
+
+                if (c.NekoBoxExample.IsNotEmpty())
+                {
+                    sb.AppendLine("示例：");
+                    sb.AppendLine();
+                    sb.AppendLine("<ClientOnly>\n\t<neko-box :messages=\"[");
+                    sb.Append("\t\t");
+                    sb.AppendLine(c.NekoBoxExample);
+                    sb.AppendLine("]\">\n\t</neko-box>\n</ClientOnly>");
                     sb.AppendLine();
                 }
 

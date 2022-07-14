@@ -15,37 +15,66 @@ namespace AimuBot.Modules.Arcaea;
 
 public partial class Arcaea : ModuleBase
 {
-    [Command("ac test",
+    [Command("ac test dist",
         Name = "test",
-        Template = "/ac test <song_id>",
-        Description = "Arcaea 测试功能",
+        Template = "/ac test dist <song_id> [difficulty=ftr]",
+        Description = "谱面难度分布查询。从 ptt 10.05~13.05，查看 Aua 查分玩家的 ptt-分数 分布图。可以用来分析谱面的真实难度、个人差、个人实力虚高/虚低情况等。",        
+        NekoBoxExample = 
+            "{ position: 'right', msg: '/ac test dist testify byd' },"+
+            "{ position: 'left', chain: [{ img: '/images/Arcaea/testify.webp' }] },",
         Level = RbacLevel.Super,
-        Matching = Matching.Exact,
+        State = State.Test,
+        Matching = Matching.StartsWith,
         SendType = SendType.Send)]
     public MessageChain OnArcTest(BotMessage msg)
     {
-        var songId = msg.Content;
+        var content = msg.Content;
+
+        var difficultyText = content.SubstringAfterLast(" ");
+        var difficulty = difficultyText.ToLower() switch
+        {
+            "pst" => 0,
+            "prs" => 1,
+            "ftr" => 2,
+            "byd" => 3,
+            _     => -1
+        };
+
+        var songId = "";
+        if (difficulty == -1)
+        {
+            difficulty = 2;
+            songId = content;
+        }
+        else
+        {
+            songId = content.SubstringBeforeLast(" ");
+        }
+
+        songId = TryGetSongIdByKeyword(songId);
+        LogMessage($"[Arcaea Dist] {msg.SenderId}: {songId}, {difficulty}");
+        
         Task.Run(async () =>
         {
-            await GetSongDist(songId, 3);
+            await GetSongDist(songId, difficulty);
             await msg.Bot.SendGroupMessageImage(msg.SubjectId, BotUtil.CombinePath($"Arcaea/songstat/{songId}.jpg"));
         });
         return "";
     }
 
-    [Command("ac test2",
+    [Command("ac test sync song",
         Name = "test2",
-        Template = "/ac test2",
-        Description = "Arcaea 测试功能2",
+        Template = "/ac test sync song",
+        Description = "从 Aua 同步所有谱面信息。",
         Level = RbacLevel.Super,
         Matching = Matching.Exact,
         SendType = SendType.Send)]
     public MessageChain OnArcTest2(BotMessage msg) => GetAllSongInfoFromAua();
 
-    [Command("ac test3",
+    [Command("ac test sync alias",
         Name = "test3",
-        Template = "/ac test3",
-        Description = "Arcaea 测试功能3",
+        Template = "/ac test sync alias",
+        Description = "从 Aua 同步所有歌曲别名。",
         Level = RbacLevel.Super,
         Matching = Matching.Exact,
         SendType = SendType.Send)]
@@ -53,8 +82,8 @@ public partial class Arcaea : ModuleBase
 
     private async Task GetSongDist(string songId, int difficulty)
     {
-        var startPtt = 1004;
-        var endPtt = 1304;
+        var startPtt = 1005;
+        var endPtt = 1305;
         var YSegments = 50;
         var dy = (endPtt - startPtt) / YSegments;
         var XSegments = 100;
@@ -95,11 +124,11 @@ public partial class Arcaea : ModuleBase
         };
 
         p.Color = Color.Red;
+        drawPttLine(1300);
         drawPttLine(1275);
         drawPttLine(1250);
         drawPttLine(1200);
         drawPttLine(1100);
-        drawPttLine(1000);
 
         var b = new SolidBrush(Color.Green);
 

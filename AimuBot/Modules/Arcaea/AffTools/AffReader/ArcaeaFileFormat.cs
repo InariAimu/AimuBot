@@ -82,6 +82,8 @@ namespace AimuBot.Modules.Arcaea.AffTools.AffReader
 
         public int Color;
 
+        public string Fx = null!;
+
         public bool IsVoid;
 
         public List<int>? ArcTaps;
@@ -94,15 +96,15 @@ namespace AimuBot.Modules.Arcaea.AffTools.AffReader
         {
             return type switch
             {
-                "b" => ArcLineType.B,
-                "s" => ArcLineType.S,
-                "si" => ArcLineType.Si,
-                "so" => ArcLineType.So,
+                "b"    => ArcLineType.B,
+                "s"    => ArcLineType.S,
+                "si"   => ArcLineType.Si,
+                "so"   => ArcLineType.So,
                 "sisi" => ArcLineType.SiSi,
                 "siso" => ArcLineType.SiSo,
                 "sosi" => ArcLineType.SoSi,
                 "soso" => ArcLineType.SoSo,
-                _ => ArcLineType.S
+                _      => ArcLineType.S
             };
         }
     }

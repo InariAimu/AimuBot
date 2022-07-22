@@ -18,7 +18,7 @@ internal class Analyzer
     public float baseBpl;
     public float baseTimePerSegment;
     public int segmentCountInBaseBpm;
-    
+
     public readonly Dictionary<int, int> timingCombos = new();
     public readonly Dictionary<int, int> timingTaps = new();
 
@@ -59,21 +59,93 @@ internal class Analyzer
         realTotalTime = totalTime;
         totalTime += baseTimePerSegment / 4;
 
-        for (double i = 0; i < totalTime; i += baseTimePerSegment)
+        for (double i = 0; i < totalTime; i += baseTimePerSegment) segmentCountInBaseBpm++;
+    }
+    
+    /// <summary>
+    /// To pair the scenecontrol statement
+    /// </summary>
+    /// <returns></returns>
+    public List<(ArcaeaAffSceneControl, ArcaeaAffSceneControl)> GetPairEnwidenLanes()
+    {
+        var list = new List<ArcaeaAffSceneControl>();
+        var result = new List<(ArcaeaAffSceneControl, ArcaeaAffSceneControl)>();
+
+        foreach (var affEvent in _affReader.Events)
         {
-            segmentCountInBaseBpm++;
+            if (affEvent.Type != EventType.SceneControl) continue;
+            if ((affEvent as ArcaeaAffSceneControl)?.SceneControlTypeName != "enwidenlanes") continue;
+
+            list.Add((ArcaeaAffSceneControl)affEvent);
         }
+
+        if (list.Count % 2 != 0) // Pair the enwidenlane
+        {
+            var end = new ArcaeaAffSceneControl
+            {
+                Timing = _affReader.Events.Last().Timing,
+                Type = EventType.SceneControl,
+                Parameters = new List<object>() { 0, 0 },
+                SceneControlTypeName = "enwidenlanes"
+            };
+            list.Add(end);
+        }
+
+        for (int i = 0; i < list.Count - 1; i++)
+        {
+            var statement = list[i];
+            if (Convert.ToInt32(statement.Parameters[1]) != 1) continue;
+            if (Convert.ToInt32(list[i + 1].Parameters[1]) == 0) result.Add((statement, list[i + 1]));
+        }
+        return result;
     }
 
+    public List<(int, int)> Get4LaneInterval(int? end)
+    {
+        var list = new List<ArcaeaAffSceneControl>();
+        var result = new List<(int, int)>();
+
+        foreach (var affEvent in _affReader.Events)
+        {
+            if (affEvent.Type != EventType.SceneControl) continue;
+            if ((affEvent as ArcaeaAffSceneControl)?.SceneControlTypeName != "enwidenlanes") continue;
+
+            list.Add((ArcaeaAffSceneControl)affEvent);
+        }
+
+
+        if (list.Count == 0)
+        {
+            result.Add((0, end ?? _affReader.Events.Last().Timing));
+            return result;
+        }
+
+        var startSegment = 0;
+        var pair = GetPairEnwidenLanes();
+        foreach (var statement in list)
+        {
+            if (pair.TrueForAll(x => x.Item1.Timing != startSegment && x.Item2.Timing != statement.Timing))
+                result.Add((startSegment, statement.Timing));
+            startSegment = statement.Timing;
+        }
+
+        if (Convert.ToInt32(list.Last().Parameters[1]) == 0)
+        {
+            result.Add((list.Last().Timing, end ?? _affReader.Events.Last().Timing));
+        }
+
+        return result;
+    }
+    
     public void AnalyzeNotes()
     {
         _noteRaws.Clear();
 
         Dictionary<int, List<ArcaeaAffArc>> arcColors = new();
-        arcColors.Add(0, new());
-        arcColors.Add(1, new());
-        arcColors.Add(2, new());
-        arcColors.Add(3, new());
+        arcColors.Add(0, new List<ArcaeaAffArc>());
+        arcColors.Add(1, new List<ArcaeaAffArc>());
+        arcColors.Add(2, new List<ArcaeaAffArc>());
+        arcColors.Add(3, new List<ArcaeaAffArc>());
 
         foreach (var ev in _affReader.Events)
         {
@@ -83,10 +155,10 @@ internal class Analyzer
             switch (ev)
             {
                 case ArcaeaAffTap evTap:
-                    _noteRaws.Add(new(ev.Timing, 0));
+                    _noteRaws.Add(new NoteRaw(ev.Timing, 0));
                     break;
                 case ArcaeaAffHold evHold:
-                    _noteRaws.Add(new(ev.Timing, evHold.EndTiming - evHold.Timing));
+                    _noteRaws.Add(new NoteRaw(ev.Timing, evHold.EndTiming - evHold.Timing));
                     break;
                 case ArcaeaAffArc evArc:
                 {
@@ -94,12 +166,8 @@ internal class Analyzer
                         arcColors[evArc.Color].Add(evArc);
 
                     if (evArc.ArcTaps is not null)
-                    {
                         foreach (var at in evArc.ArcTaps)
-                        {
-                            _noteRaws.Add(new(at, 0));
-                        }
-                    }
+                            _noteRaws.Add(new NoteRaw(at, 0));
 
                     break;
                 }
@@ -112,13 +180,11 @@ internal class Analyzer
             {
                 var arc = arcList[i];
                 var prev = arcList[i - 1];
-                if (arc.Timing != prev.EndTiming)
-                {
-                    _noteRaws.Add(new(arc.Timing, 0));
-                }
+                if (arc.Timing != prev.EndTiming) _noteRaws.Add(new NoteRaw(arc.Timing, 0));
             }
+
             if (arcList.Any())
-                _noteRaws.Add(new(arcList[0].Timing, 0));
+                _noteRaws.Add(new NoteRaw(arcList[0].Timing, 0));
         }
 
         _noteRaws = _noteRaws.OrderBy(x => x.TimePoint).ToList();
@@ -136,22 +202,18 @@ internal class Analyzer
                 n.Analyze(_noteRaws[i].TimePoint, dt, baseBpm);
             Notes.Add(n);
         }
-
     }
 
     private ArcaeaAffTiming GetCurrentTiming(int timing, int timingGroup)
     {
         var timings = _affReader.Events
-          .Where(ev => ev is ArcaeaAffTiming && ev.TimingGroup == timingGroup)
-          .Select(x => x as ArcaeaAffTiming);
+            .Where(ev => ev is ArcaeaAffTiming && ev.TimingGroup == timingGroup)
+            .Select(x => x as ArcaeaAffTiming);
 
         return timings.Last(x => x.Timing <= timing);
     }
 
-    public bool IsGroupNoInput(int timingGroup)
-    {
-        return _affReader.TimingGroupProperties[timingGroup].NoInput;
-    }
+    public bool IsGroupNoInput(int timingGroup) => _affReader.TimingGroupProperties[timingGroup].NoInput;
 
     public int CalcSingleHold(int start, int end, bool hasHead, float bpm, float tpdf)
     {
@@ -163,9 +225,9 @@ internal class Analyzer
         float unit = bpm >= 256 ? 60000 : 30000;
         unit /= bpm;
         unit /= tpdf;
-        float cf = d / unit;
+        var cf = d / unit;
         var ci = (int)cf;
-        return ci <= 1 ? 1 : (hasHead ? ci - 1 : ci);
+        return ci <= 1 ? 1 : hasHead ? ci - 1 : ci;
     }
 
     public int GetCombo(int timing)
@@ -188,10 +250,10 @@ internal class Analyzer
     {
         try
         {
-            var t = timingTaps.Where(x => (timing - threshold <= x.Key && x.Key < timing + threshold)).ToList();
+            var t = timingTaps.Where(x => timing - threshold <= x.Key && x.Key < timing + threshold).ToList();
             if (!t.Any())
                 return 0;
-            float density = (float)t.Sum(x => x.Value) * 1000 / (threshold * 2);
+            var density = (float)t.Sum(x => x.Value) * 1000 / (threshold * 2);
             return density;
         }
         catch
@@ -202,37 +264,29 @@ internal class Analyzer
 
     public void CalcNotes()
     {
-        List<ArcaeaAffArc> arcs =
+        var arcs =
             _affReader.Events.Where(x => x is ArcaeaAffArc a && !a.IsVoid && !IsGroupNoInput(x.TimingGroup))
-            .Select(x => x as ArcaeaAffArc).ToList();
+                .Select(x => x as ArcaeaAffArc).ToList();
 
         arcs.Sort((a, b) => a.Timing.CompareTo(b.Timing));
-        ArcaeaAffArc[] scra = arcs.ToArray();
+        var scra = arcs.ToArray();
         Array.Sort(scra, (a, b) => a.EndTiming.CompareTo(b.EndTiming));
-        int m = scra.Length;
-        int i = 0;
+        var m = scra.Length;
+        var i = 0;
 
         List<int> timingNotePoints = new();
 
-        foreach (ArcaeaAffArc evArc in arcs)
-        {
+        foreach (var evArc in arcs)
             for (var j = i; j < m; ++j)
             {
-                ArcaeaAffArc prev = scra[j];
+                var prev = scra[j];
                 if (prev.EndTiming <= evArc.Timing - 10)
-                {
                     i = j;
-                }
                 else if (prev.EndTiming >= evArc.Timing + 10)
-                {
                     break;
-                }
                 else if (evArc != prev && evArc.YStart == prev.YEnd && Math.Abs(evArc.XStart - prev.XEnd) < 0.1)
-                {
                     evArc.HasHead = false;
-                }
             }
-        }
 
         List<int> tapTimings = new();
 
@@ -252,11 +306,11 @@ internal class Analyzer
                 case ArcaeaAffHold evHold:
                 {
                     var timing = GetCurrentTiming(evHold.Timing, evHold.TimingGroup);
-                    var t = CalcSingleHold(evHold.Timing, evHold.EndTiming, true, timing.Bpm, _affReader.TimingPointDensityFactor);
+                    var t = CalcSingleHold(evHold.Timing, evHold.EndTiming, true, timing.Bpm,
+                        _affReader.TimingPointDensityFactor);
                     for (var tx = 0; tx < t; tx++)
-                    {
-                        timingNotePoints.Add(evHold.Timing + (int)((evHold.EndTiming - evHold.Timing) * (tx + 0.5f) / t));
-                    }
+                        timingNotePoints.Add(
+                            evHold.Timing + (int)((evHold.EndTiming - evHold.Timing) * (tx + 0.5f) / t));
                     Hold += t;
                     Total += t;
                     break;
@@ -276,11 +330,10 @@ internal class Analyzer
                         continue;
 
                     var timing = GetCurrentTiming(evArc.Timing, evArc.TimingGroup);
-                    var t = CalcSingleHold(evArc.Timing, evArc.EndTiming, evArc.HasHead, timing.Bpm, _affReader.TimingPointDensityFactor);
+                    var t = CalcSingleHold(evArc.Timing, evArc.EndTiming, evArc.HasHead, timing.Bpm,
+                        _affReader.TimingPointDensityFactor);
                     for (var tx = 0; tx < t; tx++)
-                    {
                         timingNotePoints.Add(evArc.Timing + (int)((evArc.EndTiming - evArc.Timing) * (tx + 0.5f) / t));
-                    }
                     Arc[evArc.Color] += t;
                     Total += t;
                     break;
@@ -291,18 +344,15 @@ internal class Analyzer
         tapTimings = tapTimings.OrderBy(x => x).ToList();
 
         foreach (var timing in tapTimings)
-        {
             if (timingTaps.ContainsKey(timing))
                 timingTaps[timing]++;
 
             else
                 timingTaps[timing] = 1;
-        }
 
         timingNotePoints = timingNotePoints.OrderBy(x => x).ToList();
-        int total = 0;
+        var total = 0;
         foreach (var timing in timingNotePoints)
-        {
             if (timingCombos.ContainsKey(timing))
             {
                 total++;
@@ -313,27 +363,27 @@ internal class Analyzer
                 total++;
                 timingCombos[timing] = total;
             }
-        }
 
-        Console.WriteLine($"F{Tap} L{Hold} A{Arc[0] + Arc[1]} (blue{Arc[0]} red{Arc[1]}) S{ArcTap} t:{Tap + Hold + Arc[0] + Arc[1] + ArcTap}");
+        Console.WriteLine(
+            $"F{Tap} L{Hold} A{Arc[0] + Arc[1]} (blue{Arc[0]} red{Arc[1]}) S{ArcTap} t:{Tap + Hold + Arc[0] + Arc[1] + ArcTap}");
     }
 
     public void AnalyzeSegments()
     {
-        List<ArcaeaAffTiming> Timings = _affReader.Events
-          .Where(ev => ev is ArcaeaAffTiming && ev.TimingGroup == 0)
-          .Select(x => x as ArcaeaAffTiming).ToList();
+        var Timings = _affReader.Events
+            .Where(ev => ev is ArcaeaAffTiming && ev.TimingGroup == 0)
+            .Select(x => x as ArcaeaAffTiming).ToList();
 
-        for (int i = 0; i < Timings.Count - 1; ++i)
+        for (var i = 0; i < Timings.Count - 1; ++i)
         {
-            float segment = Timings[i].Bpm == 0 ?
-                Timings[i + 1].Timing - Timings[i].Timing :
-                60000 / Math.Abs(Timings[i].Bpm) * Timings[i].BeatsPerLine;
+            var segment = Timings[i].Bpm == 0
+                ? Timings[i + 1].Timing - Timings[i].Timing
+                : 60000 / Math.Abs(Timings[i].Bpm) * Timings[i].BeatsPerLine;
             if (segment == 0) continue;
-            int n = 0;
+            var n = 0;
             while (true)
             {
-                float j = Timings[i].Timing + n++ * segment;
+                var j = Timings[i].Timing + n++ * segment;
                 if (j >= Timings[i + 1].Timing)
                     break;
                 SegmentTimings.Add(j);
@@ -342,11 +392,12 @@ internal class Analyzer
 
         if (Timings.Count >= 1)
         {
-            float segmentRemain = Timings[^1].Bpm == 0 ? totalTime - Timings[^1].Timing
+            var segmentRemain = Timings[^1].Bpm == 0
+                ? totalTime - Timings[^1].Timing
                 : 60000 / Math.Abs(Timings[^1].Bpm) * Timings[^1].BeatsPerLine;
             if (segmentRemain != 0)
             {
-                int n = 0;
+                var n = 0;
                 float j = Timings[^1].Timing;
                 while (j < totalTime)
                 {
@@ -359,17 +410,15 @@ internal class Analyzer
         if (Timings.Count >= 1 && Timings[0].Bpm != 0 && Timings[0].BeatsPerLine != 0)
         {
             float t = 0;
-            float delta = 60000 / Math.Abs(Timings[0].Bpm) * Timings[0].BeatsPerLine;
-            int n = 0;
+            var delta = 60000 / Math.Abs(Timings[0].Bpm) * Timings[0].BeatsPerLine;
+            var n = 0;
             if (delta != 0)
-            {
                 while (t >= -3000)
                 {
                     n++;
                     t = -n * delta;
                     SegmentTimings.Insert(0, t);
                 }
-            }
         }
     }
 
@@ -392,26 +441,22 @@ internal class Analyzer
                     break;
                 case ArcaeaAffArc evArc:
                 {
-                    if (evArc.ArcTaps is not null)
-                    {
-                        timingList.AddRange(evArc.ArcTaps.Select(v => (v, ev)));
-                    }
+                    if (evArc.ArcTaps is not null) timingList.AddRange(evArc.ArcTaps.Select(v => (v, ev)));
 
                     break;
                 }
-
             }
         }
 
         Dictionary<int, int> msec = new();
-        for (int i = -threshold; i <= threshold; i++)
+        for (var i = -threshold; i <= threshold; i++)
             msec.Add(i, 0);
 
-        for (int i = 0; i < timingList.Count; i++)
+        for (var i = 0; i < timingList.Count; i++)
         {
             var (timing, ev) = timingList[i];
 
-            for (int t = 0; t < timingList.Count; t++)
+            for (var t = 0; t < timingList.Count; t++)
             {
                 var (timingt, evt) = timingList[t];
                 if (evt == ev)
@@ -433,53 +478,49 @@ internal class Analyzer
     public static void OutputAllChartDoubleTapAnalyze(string affFolder)
     {
         var d = new DirectoryInfo(affFolder);
-        int total = 0;
-        int totalTwin = 0;
-        int ptotal = 0;
-        int ptotalTwin = 0;
-        int threshold = 5;
+        var total = 0;
+        var totalTwin = 0;
+        var ptotal = 0;
+        var ptotalTwin = 0;
+        var threshold = 5;
 
         Dictionary<int, int> dtList = new();
-        for (int i = 0; i <= threshold; i++)
+        for (var i = 0; i <= threshold; i++)
             dtList.Add(i, 0);
 
         foreach (var f in d.GetDirectories())
+        foreach (var f2 in f.GetFiles("*.aff"))
         {
-            foreach (var f2 in f.GetFiles("*.aff"))
+            ArcaeaAffReader affReader = new();
+            affReader.Parse(f2.FullName);
+
+            Analyzer analyzer = new(affReader);
+            var result = analyzer.GetChartQuality(threshold);
+
+            totalTwin += result[0];
+
+            if (result[1] > 0)
             {
-                ArcaeaAffReader affReader = new();
-                affReader.Parse(f2.FullName);
+                ptotal++;
+                for (var i = 1; i <= threshold; i++)
+                    ptotalTwin += result[i];
 
-                Analyzer analyzer = new(affReader);
-                var result = analyzer.GetChartQuality(threshold);
+                for (var i = 0; i <= threshold; i++)
+                    dtList[i] += result[i];
 
-                totalTwin += result[0];
-
-                if (result[1] > 0)
-                {
-                    ptotal++;
-                    for (int i = 1; i <= threshold; i++)
-                        ptotalTwin += result[i];
-
-                    for (int i = 0; i <= threshold; i++)
-                        dtList[i] += result[i];
-
-                    Console.WriteLine(f2.FullName);
-                    Console.WriteLine($"dt: " +
-                        string.Join(" ",
-                        result.Where(k => k.Key >= 0 && k.Value > 0).
-                        Select(k => $"[{k.Key},{k.Value}]")
-                        ));
-                }
-
-                total++;
+                Console.WriteLine(f2.FullName);
+                Console.WriteLine($"dt: " +
+                                  string.Join(" ",
+                                      result.Where(k => k.Key >= 0 && k.Value > 0).Select(k => $"[{k.Key},{k.Value}]")
+                                  ));
             }
+
+            total++;
         }
 
         Console.WriteLine($"total problem charts: {ptotal}/{total}");
         Console.WriteLine($"total problem doubles: {ptotalTwin}/{totalTwin + ptotalTwin}");
-        for (int i = 1; i <= threshold; i++)
+        for (var i = 1; i <= threshold; i++)
             Console.WriteLine($"total {i}ms: {dtList[i]}");
     }
-
 }

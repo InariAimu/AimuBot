@@ -5,6 +5,7 @@ using AimuBot.Adapters.Connection;
 using AimuBot.Core.Config;
 using AimuBot.Core.Events;
 using AimuBot.Core.Extensions;
+using AimuBot.Core.ModuleMgr;
 using AimuBot.Core.Utils;
 
 using Newtonsoft.Json;
@@ -37,6 +38,8 @@ public class Bot
         _dispatcher.OnLog += Dispatcher_OnLog;
         _dispatcher.OnMessage += Dispatcher_OnMessage;
 
+        CommandInvokeLogger.Instance.Init();
+        
         ModuleMgr.Init();
 
         FuturedSocket futuredSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);

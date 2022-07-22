@@ -7,6 +7,7 @@ public class SqliteColumnAttribute : Attribute
     public string Constraint = "";
     public string DefaultValue = "";
     public string NameOverride = "";
+    public bool AutoField = false;
 
     public SqliteColumnAttribute(string nameOverride = "")
     {

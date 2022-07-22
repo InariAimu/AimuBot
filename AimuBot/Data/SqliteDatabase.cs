@@ -45,7 +45,11 @@ public class SqliteDatabase
 
         var tableName = tableNameOverride.IsNullOrEmpty() ? tn.Name : tableNameOverride;
 
-        var members = t.GetFields();
+        var members = t.GetFields().Where(y =>
+        {
+            var attr = y.GetCustomAttribute<SqliteColumnAttribute>();
+            return attr is { AutoField: false };
+        }).ToList();
         StringBuilder sb = new($"insert into {tableName} (");
 
         sb.Append(string.Join(',', members.Select(x =>
@@ -55,7 +59,7 @@ public class SqliteDatabase
         })));
 
         sb.Append(") values (");
-        for (var i = 0; i < members.Length - 1; i++)
+        for (var i = 0; i < members.Count - 1; i++)
         {
             sb.Append('$');
             sb.Append(members[i].Name);

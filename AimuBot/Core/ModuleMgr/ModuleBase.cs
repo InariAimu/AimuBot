@@ -120,6 +120,9 @@ public class ModuleBase
                             var ret = msgChain?.ToCsCode();
                             BotLogger.LogI(OnGetName(), ret);
                             if (ret == "") return;
+                            
+                            CommandInvokeLogger.Instance.Log(cmd.InnerMethod, msg, msgChain);
+                            
                             switch (cmd.CommandInfo.SendType)
                             {
                                 case SendType.Send:
@@ -127,6 +130,8 @@ public class ModuleBase
                                     break;
                                 case SendType.Reply:
                                     msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
+                                    break;
+                                case SendType.Custom:
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException();

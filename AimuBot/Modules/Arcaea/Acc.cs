@@ -102,9 +102,9 @@ public partial class Arcaea : ModuleBase
 
         var pr = await GetPlayData(contentRecord.SongId, contentRecord.Difficulty, ptt - 10, ptt + 10);
 
-        var allPlayers = Enumerable.Sum<ScoreDistItem>(pr.Content, x => x.Count);
+        var allPlayers = pr.Content.Sum(x => x.Count);
 
-        var above = Enumerable.Where<ScoreDistItem>(pr.Content, x => x.Fscore * 10000 > contentRecord.Score)
+        var above = pr.Content.Where(x => x.Fscore * 10000 > contentRecord.Score)
             .Sum(x => x.Count);
         if (above == 0)
             above = 1;
@@ -112,7 +112,7 @@ public partial class Arcaea : ModuleBase
         sb.Append(
             $"Aua play rank in {(float)(ptt - 10) / 100:F2}~{(float)(ptt + 10) / 100:F2}: #{above}/{allPlayers} ");
 
-        sb.Append($"(top {(float)above * 100 / allPlayers:F2}%)\n");
+        sb.Append($"({(float)above * 100 / allPlayers:F2}%) avg{(int)pr.Content.Average(x=>x.Fscore)}\n");
 
         var pr2 = await GetPlayData(contentRecord.SongId, contentRecord.Difficulty, ptt - 50, ptt + 50);
 
@@ -126,7 +126,7 @@ public partial class Arcaea : ModuleBase
         sb.Append(
             $"Aua play rank in {(float)(ptt - 50) / 100:F2}~{(float)(ptt + 50) / 100:F2}: #{above2}/{allPlayers2} ");
 
-        sb.Append($"(top {(float)above2 * 100 / allPlayers2:F2}%)");
+        sb.Append($"({(float)above2 * 100 / allPlayers2:F2}%) avg{(int)pr2.Content.Average(x=>x.Fscore)}");
 
         return sb.ToString();
     }

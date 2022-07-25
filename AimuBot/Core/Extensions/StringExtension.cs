@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace AimuBot.Core.Extensions;
 
@@ -19,33 +20,36 @@ public static class StringExtension
     public static string SubstringAfter(this string s, string value)
     {
         var pos = s.IndexOf(value, StringComparison.Ordinal);
-        if (pos == -1)
-            return string.Empty;
-        return s[(pos + value.Length)..];
+        return pos == -1 ? s : s[(pos + value.Length)..];
     }
 
     public static string SubstringAfterLast(this string s, string value)
     {
         var pos = s.LastIndexOf(value, StringComparison.Ordinal);
-        if (pos == -1)
-            return string.Empty;
-        return s[(pos + value.Length)..];
+        return pos == -1 ? s : s[(pos + value.Length)..];
     }
 
     public static string SubstringBefore(this string s, string value)
     {
         var pos = s.IndexOf(value, StringComparison.Ordinal);
-        if (pos == -1)
-            return string.Empty;
-        return s[..pos];
+        return pos == -1 ? s : s[..pos];
     }
 
     public static string SubstringBeforeLast(this string s, string value)
     {
         var pos = s.LastIndexOf(value, StringComparison.Ordinal);
-        if (pos == -1)
-            return string.Empty;
-        return s[..pos];
+        return pos == -1 ? s : s[..pos];
+    }
+
+    public static string Replace(this string s, Regex r, string newValue)
+    {
+        return r.Replace(s, newValue);
+    }
+    
+    public static string ReplaceFirst(this string s, string oldValue, string newValue)
+    {
+        var pos = s.IndexOf(oldValue, StringComparison.Ordinal);
+        return pos == -1 ? s : s[..pos] + newValue + s[(pos + oldValue.Length)..];
     }
 
     public static bool IsEmpty(this string s) => s == "";

@@ -21,7 +21,7 @@ public class Help : ModuleBase
         SendType = SendType.Reply)]
     public MessageChain OnHelp(BotMessage msg)
     {
-        return $"[AimuBot] {Assembly.GetExecutingAssembly().GetName().Version?.ToString(4)}\n请访问 https://docs-aimubot.amu.moe 来获取帮助信息";
+        return $"[AimuBot] {Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}\n请访问 https://docs-aimubot.amu.moe 来获取帮助信息";
     }
     
     [Command("doc export",

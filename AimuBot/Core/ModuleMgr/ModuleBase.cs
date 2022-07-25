@@ -1,6 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Reflection;
 
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Utils;
@@ -59,13 +60,17 @@ public class ModuleBase
 
                 if (param is not CommandAttribute cmd) continue;
 
-                if (cmd.State is State.Normal or State.Test)
+                if (cmd.State is State.Normal or State.Test or State.Disabled)
                 {
                     if (method.ReturnType == typeof(MessageChain) || method.ReturnType == typeof(Task<MessageChain>))
                     {
                         CommandBase cmdFuncBase = new(cmd, method);
                         _commands.Add(cmdFuncBase);
-                        BotLogger.LogV(nameof(LoadCmd), $"{t}.{method.Name} => {cmd.Name} {cmd.ShowTip} ");
+                        if (cmd.State is not State.Normal)
+                            BotLogger.LogW(nameof(LoadCmd),
+                                $"{t}.{method.Name} => [{cmd.State}] {cmd.Name} {cmd.ShowTip} ");
+                        else
+                            BotLogger.LogV(nameof(LoadCmd), $"{t}.{method.Name} => {cmd.Name} {cmd.ShowTip} ");
                     }
                     else
                     {
@@ -102,7 +107,11 @@ public class ModuleBase
             if (!succ) continue;
 
             var userLevel = Bot.Config.AccessLevelControl.GetGroupMessageLevel(msg);
-            if (userLevel <= cmd.CommandInfo.Level)
+            if (userLevel > RbacLevel.Super &&
+                cmd.CommandInfo.State is State.Disabled or State.Developing or State.DisableByDefault)
+                continue;
+
+            if (userLevel == RbacLevel.Super || userLevel <= cmd.CommandInfo.Level)
             {
                 Task.Run(() =>
                 {
@@ -111,18 +120,20 @@ public class ModuleBase
                         msg.Content = body;
                         if (cmd.CommandInfo.SendType == SendType.Custom)
                         {
-                            cmd.InnerMethod?.Invoke(this, new object?[] { msg });
+                            cmd.InnerMethod?.Invoke(this, new object[] { msg });
                         }
                         else
                         {
-                            var result = cmd.InnerMethod?.Invoke(this, new object?[] { msg });
+                            var result = cmd.InnerMethod?.Invoke(this, new object[] { msg });
                             var msgChain = result as MessageChain ?? (result as Task<MessageChain>)?.Result;
                             var ret = msgChain?.ToCsCode();
+                            if (ret is null) return;
+                            
                             BotLogger.LogI(OnGetName(), ret);
                             if (ret == "") return;
-                            
+
                             CommandInvokeLogger.Instance.Log(cmd.InnerMethod, msg, msgChain);
-                            
+
                             switch (cmd.CommandInfo.SendType)
                             {
                                 case SendType.Send:
@@ -131,11 +142,10 @@ public class ModuleBase
                                 case SendType.Reply:
                                     msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
                                     break;
-                                case SendType.Custom:
-                                    break;
                                 default:
-                                    throw new ArgumentOutOfRangeException();
+                                    throw new ArgumentOutOfRangeException($"No such type: {cmd.CommandInfo.SendType}");
                             }
+
                             Information.MessageSent++;
                         }
                     }
@@ -159,7 +169,6 @@ public class ModuleBase
                 return true;
             }
 
-            
             LogMessage($"[{msg.SubjectName}][{msg.SenderName}] 权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
             /*if (userLevel != RbacLevel.RestrictedUser)
                 msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id,

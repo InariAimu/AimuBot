@@ -25,20 +25,21 @@ internal class BqbNameAlias : NameAliasSystem
 internal class Biaoqingbao : ModuleBase
 {
     private readonly BqbNameAlias _nameAlias = new();
-    
+
     private Dictionary<string, List<string>?> _imageAlias = new();
     private readonly string _imgPath = BotUtil.CombinePath("表情包/");
 
     public override bool OnReload()
     {
         _nameAlias.CreateTable();
-        
+
         DirectoryInfo di = new(_imgPath);
         foreach (var d in di.GetDirectories())
         {
             var na = _nameAlias.GetAlias(d.Name);
             _imageAlias.TryAdd(d.Name, na?.ToList());
         }
+
         return true;
     }
 
@@ -59,23 +60,23 @@ internal class Biaoqingbao : ModuleBase
         sb.AppendLine();
         return sb.ToString();
     }
-    
+
     [Command("",
         Name = "表情包",
         Description = "获取随机或指定的表情包图片。",
         Template = "/<name> [id]",
         DescCustomFunc = "OnRequestImage_Doc",
-        BlocksBefore = new []
+        BlocksBefore = new[]
         {
-            "::: tip 注意\n表情包功能内图片收集自网络；其版权归各自作者所有。有鉴于这些图片：\n\n- 公开流通于网络\n- 非盈利/非商业性使用\n\n"+
+            "::: tip 注意\n表情包功能内图片收集自网络；其版权归各自作者所有。有鉴于这些图片：\n\n- 公开流通于网络\n- 非盈利/非商业性使用\n\n" +
             "故在 AimuBot 中提供用于表情包功能。如您将其用于其他用途可能构成侵犯著作权。 AimuBot 开发组对您的行为不予承担任何责任。\n:::"
         },
-        NekoBoxExample = 
-            "{ position: 'right', msg: '/arcaea' },"+
-            "{ position: 'left', chain: [{ img: '/images/Biaoqingbao/10.jpg' },] },"+
-            "{ position: 'right', msg: '/llmmt 13' },"+
+        NekoBoxExample =
+            "{ position: 'right', msg: '/arcaea' }," +
+            "{ position: 'left', chain: [{ img: '/images/Biaoqingbao/10.jpg' },] }," +
+            "{ position: 'right', msg: '/llmmt 13' }," +
             "{ position: 'left', chain: [{ img: '/images/Biaoqingbao/13.jpg' },] },",
-        Matching = Matching.Any,
+        Matching = Matching.AnyWithLeadChar,
         CooldownType = CooldownType.Group,
         CooldownSecond = 5,
         SendType = SendType.Send)]
@@ -89,6 +90,9 @@ internal class Biaoqingbao : ModuleBase
         var imgDir = "";
         foreach (var (k, v) in _imageAlias)
         {
+            if (v is null)
+                continue;
+
             if (k == content)
             {
                 imgDir = k;
@@ -107,17 +111,11 @@ internal class Biaoqingbao : ModuleBase
 
     private MessageChain GetImage(string directory, int id = -1)
     {
+        LogMessage($"{directory}, {id}");
         DirectoryInfo di = new(Path.Combine(_imgPath, directory));
         var files = di.GetFiles();
-        if (id < 0 || id >= files.Length)
-        {
-            var im = files[id];
-            return new MessageBuilder(ImageChain.Create(Path.Combine(_imgPath, directory, im.Name))).Build();
-        }
-        else
-        {
-            var im = files.ToList().Random();
-            return new MessageBuilder(ImageChain.Create(Path.Combine(_imgPath, directory, im.Name))).Build();
-        }
+
+        var im = (id < 0 || id >= files.Length) ? files.ToList().Random() : files[id];
+        return new MessageBuilder(ImageChain.Create(Path.Combine(_imgPath, directory, im.Name))).Build();
     }
 }

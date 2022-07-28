@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Security;
 using System.Xml;
 
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
@@ -19,6 +20,12 @@ internal class WolframAlpha : ModuleBase
     [Config("api_key", DefaultValue = "XXXXXX-XXXXXXXXXX")]
     private string _apiKey = null!;
 
+    private static readonly string[] BannedDataTypes =
+    {
+        "Leader", "Person", "Movie", "Book", "NuclearReactor", "Military", "AdministrativeDivision", "Country",
+        "HistoricalPeriod", "MetropolitanArea",
+    };
+
     [Command("wa",
         Name = "WolframAlpha查询",
         Description = "进行一次 [WolframAlpha](https://www.wolframalpha.com/) 查询（请使用英语）。视网络情况，查询可能需要 5~30 秒，请勿重复查询。",
@@ -27,6 +34,7 @@ internal class WolframAlpha : ModuleBase
         {
             "::: tip\n示例可以从 [Examples by Topic](https://www.wolframalpha.com/examples/) 获取。\n:::",
             "::: warning 注意\n由于接口为 WolframAlpha Non-commercial API，因此查询结果禁止任何形式的商业使用。\n:::",
+            "::: danger 警告\n所有返回数据来自 WolframAlpha，不代表 AimuBot 及其开发者的政治立场。\n:::",
             "::: danger 警告\n**绝对禁止**查询任何涉及人物、政治相关内容。AimuBot 已内置内容审核，查询上述内容一经发现将**永久封禁您的 Bot 使用权限**。\n:::",
         },
         NekoBoxExample =
@@ -56,7 +64,24 @@ internal class WolframAlpha : ModuleBase
         var error = xml.SelectSingleNode("/queryresult").Attributes["error"].Value == "true";
 
         if (!success || error) return "Wolfram Alpha query error occured.";
+        
+        var dataTypes = xml.SelectSingleNode("/queryresult").Attributes["datatypes"].Value.Split(',').ToList();
 
+        var rejectReason = "";
+        foreach (var dataType in dataTypes)
+        {
+            foreach (var t in BannedDataTypes)
+            {
+                if (string.Equals(dataType, t, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    rejectReason += dataType + ",";
+                }
+            }
+        }
+
+        if (rejectReason.Length > 0)
+            return "wa reject: contains " + rejectReason;
+        
         var imgNodes = xml.SelectNodes("/queryresult/pod");
         var podCount = 0;
         List<string> titles = new();

@@ -1,5 +1,7 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
 
+using AimuBot.Core.Config;
 using AimuBot.Core.Extensions;
 using AimuBot.Core.Message;
 using AimuBot.Core.Message.Model;
@@ -29,15 +31,47 @@ internal class Biaoqingbao : ModuleBase
     private Dictionary<string, List<string>?> _imageAlias = new();
     private readonly string _imgPath = BotUtil.CombinePath("表情包/");
 
+    private Dictionary<string, Dictionary<int, string>> _images = new();
+
     public override bool OnReload()
     {
         _nameAlias.CreateTable();
 
+        _images.Clear();
         DirectoryInfo di = new(_imgPath);
+        
         foreach (var d in di.GetDirectories())
         {
             var na = _nameAlias.GetAlias(d.Name);
             _imageAlias.TryAdd(d.Name, na?.ToList());
+
+            Dictionary<int, string> f = new();
+
+            var files = d.GetFiles();
+            var maxIndex = 0;
+            
+            foreach (var file in files)
+            {
+                if (!new Regex(@"^\d+\.\w+$").IsMatch(file.Name)) continue;
+                
+                var fileIndex = Convert.ToInt32(file.Name.SubstringBeforeLast("."));
+                f.Add(fileIndex, $"{d.Name}/{file.Name}");
+                maxIndex = Math.Max(maxIndex, fileIndex);
+            }
+
+            maxIndex++;
+            files = d.GetFiles();
+            foreach (var file in files)
+            {
+                if (new Regex(@"^\d+\.\w+$").IsMatch(file.Name)) continue;
+                
+                var newPath = Path.Combine(file.DirectoryName, $"{maxIndex}{file.Extension}");
+                File.Move(file.FullName, newPath);
+                f.Add(maxIndex, $"{d.Name}/{maxIndex}{file.Extension}");
+                maxIndex++;
+            }
+
+            _images.Add(d.Name, f);
         }
 
         return true;
@@ -82,10 +116,8 @@ internal class Biaoqingbao : ModuleBase
         SendType = SendType.Send)]
     public MessageChain OnRequestImage(BotMessage msg)
     {
-        var content = msg.Content.Trim().ToLower().SubstringBeforeLast(" ");
-        var numStr = content.SubstringAfterLast(" ");
-        var num = -1;
-        if (!numStr.IsNullOrEmpty()) num = Convert.ToInt32(num);
+        var c = msg.Content.Trim().ToLower();
+        var content = c.SubstringBeforeLast(" ");
 
         var imgDir = "";
         foreach (var (k, v) in _imageAlias)
@@ -106,16 +138,24 @@ internal class Biaoqingbao : ModuleBase
             }
         }
 
-        return !imgDir.IsNullOrEmpty() ? GetImage(imgDir, num) : "";
+        var numStr = c.SubstringAfterLast(" ", "-1");
+        if (imgDir.IsNullOrEmpty())
+            return "";
+
+        var num = -1;
+        if (!numStr.IsNullOrEmpty()) num = Convert.ToInt32(numStr);
+
+        return GetImage(imgDir, num);
     }
 
     private MessageChain GetImage(string directory, int id = -1)
     {
         LogMessage($"{directory}, {id}");
-        DirectoryInfo di = new(Path.Combine(_imgPath, directory));
-        var files = di.GetFiles();
 
-        var im = (id < 0 || id >= files.Length) ? files.ToList().Random() : files[id];
-        return new MessageBuilder(ImageChain.Create(Path.Combine(_imgPath, directory, im.Name))).Build();
+        var d = _images[directory];
+        var c = d.Count;
+        var im = (id < 0 || id >= c) ? d[BotUtil.Random.Next(0, c)] : d[id];
+
+        return new MessageBuilder(ImageChain.Create(Path.Combine(_imgPath, im))).Build();
     }
 }

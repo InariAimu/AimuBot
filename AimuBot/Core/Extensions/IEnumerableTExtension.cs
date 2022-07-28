@@ -8,15 +8,11 @@ public static class IEnumerableTExtension
 
     public static TSource? Random<TSource>(this IEnumerable<TSource> source) where TSource : class?
     {
-        if (source.IsEmpty())
-            return null;
-        return source.ElementAt(ExtensionUtils.Random.Next(0, source.Count()));
+        return source.IsEmpty() ? null : source.ElementAt(ExtensionUtils.Random.Next(0, source.Count()));
     }
 
     public static (bool, TSource) RandomWhenNotEmpty<TSource>(this IEnumerable<TSource> source) where TSource : struct
     {
-        if (source.IsEmpty())
-            return (false, default);
-        return (true, source.ElementAt(ExtensionUtils.Random.Next(0, source.Count())));
+        return source.IsEmpty() ? (false, default) : (true, source.ElementAt(ExtensionUtils.Random.Next(0, source.Count())));
     }
 }

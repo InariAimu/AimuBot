@@ -6,12 +6,7 @@ namespace AimuBot.Core.ModuleMgr;
 
 public class CommandBase
 {
-    public CommandBase(CommandAttribute commandInfo, MethodInfo innerMethod)
-    {
-        CommandInfo = commandInfo;
-        InnerMethod = innerMethod;
-    }
-
+    public ModuleBase MethodModule { get; init; }
     public CommandAttribute CommandInfo { get; init; }
     public MethodInfo InnerMethod { get; init; }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 
+using AimuBot.Core.Config;
 using AimuBot.Core.Message;
 using AimuBot.Core.Utils;
 using AimuBot.Modules;
@@ -12,6 +13,11 @@ public class ModuleMgr
 {
     private readonly List<ModuleBase> _modules = new();
 
+    // Commands must be rearranged by it's matching type globally.
+    private List<CommandBase> _commands = new();
+    public int CommandCount => _commands.Count;
+    public List<CommandBase> CommandList => _commands;
+    
     public List<ModuleBase> ModuleList => _modules;
     
     public ModuleConfig? ModuleConfig { get; set; }
@@ -51,7 +57,7 @@ public class ModuleMgr
 
             try
             {
-                module.LoadCmd();
+                module.LoadCommands();
                 module.OnInit();
                 module.OnReload();
 
@@ -91,26 +97,35 @@ public class ModuleMgr
             SaveSubModulesConfig();
         }
 
+        _commands = _commands
+            .OrderBy(x => x.CommandInfo.Matching)
+            .ThenByDescending(x => x.CommandInfo.Command.Length)
+            .ToList();
+
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            var c = _commands[i];
+            BotLogger.LogI(nameof(Init),
+                $"{c.MethodModule.GetType()} {i:D2} {c.CommandInfo.Matching} {c.CommandInfo.ShowTip}");
+        }
+
         BotLogger.LogI($"{nameof(ModuleMgr)}.{nameof(Init)}",
-            $"{_modules.Count} modules, {_modules.Sum(x => x.CommandCount)} commands Loaded.");
+            $"{_modules.Count} modules, {_commands.Count} commands Loaded.");
     }
 
-    public bool DispatchGroupMessage(BotMessage messageDesc)
+    public bool DispatchGroupMessage(BotMessage msg)
     {
         Information.MessageReceived++;
 
         var rev = false;
 
-        foreach (var module in _modules)
-        {
-            if (module.InternalDealActions(messageDesc))
-            {
-                rev = true;
-                break;
-            }
+        rev = ProcessCommands(msg);
 
-            if (module.OnGroupMessage(messageDesc))
+        if (!rev)
+        {
+            foreach (var module in _modules)
             {
+                if (!module.OnGroupMessage(msg)) continue;
                 rev = true;
                 break;
             }
@@ -122,6 +137,89 @@ public class ModuleMgr
             Information.MessageProcessed++;
 
         return rev;
+    }
+
+    private bool ProcessCommands(BotMessage msg)
+    {
+        foreach (var cmd in _commands)
+        {
+            var (succ, body) = cmd.MethodModule.CheckKeyword(cmd.CommandInfo.Command, msg, cmd.CommandInfo.Matching);
+            if (!succ) continue;
+
+            var userLevel = Bot.Config.AccessLevelControl.GetGroupMessageLevel(msg);
+            if (userLevel > RbacLevel.Super &&
+                cmd.CommandInfo.State is State.Disabled or State.Developing or State.DisableByDefault)
+                continue;
+
+            if (userLevel == RbacLevel.Super || userLevel <= cmd.CommandInfo.Level)
+            {
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        msg.Content = body;
+                        if (cmd.CommandInfo.SendType == SendType.Custom)
+                        {
+                            cmd.InnerMethod?.Invoke(this, new object[] { msg });
+                        }
+                        else
+                        {
+                            var result = cmd.InnerMethod?.Invoke(cmd.MethodModule, new object[] { msg });
+                            var msgChain = result as MessageChain ?? (result as Task<MessageChain>)?.Result;
+                            var ret = msgChain?.ToCsCode();
+                            if (ret is null) return;
+
+                            BotLogger.LogI(cmd.MethodModule.OnGetName(), ret);
+                            if (ret == "") return;
+
+                            CommandInvokeLogger.Instance.Log(cmd.InnerMethod, msg, msgChain);
+
+                            switch (cmd.CommandInfo.SendType)
+                            {
+                                case SendType.Send:
+                                    msg.Bot.SendGroupMessageSimple(msg.SubjectId, ret);
+                                    break;
+                                case SendType.Reply:
+                                    msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id, ret);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException($"No such type: {cmd.CommandInfo.SendType}");
+                            }
+
+                            Information.MessageSent++;
+                        }
+                    }
+                    catch (TargetInvocationException ex)
+                    {
+                        BotLogger.LogE(cmd.MethodModule.OnGetName(), nameof(TargetInvocationException));
+                        BotLogger.LogE(cmd.MethodModule.OnGetName(),
+                            $"[{cmd.InnerMethod?.Name}] {ex.InnerException?.Message}\n{ex.InnerException?.StackTrace}");
+                    }
+                    catch (AggregateException ex)
+                    {
+                        BotLogger.LogE(cmd.MethodModule.OnGetName(), nameof(AggregateException));
+                        BotLogger.LogE(cmd.MethodModule.OnGetName(),
+                            $"[{cmd.InnerMethod?.Name}] {ex.InnerException?.Message}\n{ex.InnerException?.StackTrace}");
+                    }
+                    catch (Exception ex)
+                    {
+                        BotLogger.LogE(cmd.MethodModule.OnGetName(),
+                            $"[{cmd.InnerMethod?.Name}] {ex.Message}\n{ex.StackTrace}");
+                    }
+                });
+                return true;
+            }
+
+            BotLogger.LogI($"[{msg.SubjectName}]",
+                "[{msg.SenderName}] 权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
+            /*if (userLevel != RbacLevel.RestrictedUser)
+                msg.Bot.ReplyGroupMessageText(msg.SubjectId, msg.Id,
+                    $"权限不足 ({userLevel}, {cmd.CommandInfo.Level} required)");
+            */
+            return false;
+        }
+
+        return false;
     }
 
     public string ReloadModule(string name)

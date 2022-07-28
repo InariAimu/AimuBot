@@ -17,28 +17,28 @@ public static class StringExtension
     public static bool Contains(this string s, string value, bool ignoreCase) =>
         s.Contains(value, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
-    public static string SubstringAfter(this string s, string value)
+    public static string SubstringAfter(this string s, string value, string? notFoundDefault = null)
     {
         var pos = s.IndexOf(value, StringComparison.Ordinal);
-        return pos == -1 ? s : s[(pos + value.Length)..];
+        return pos == -1 ? (notFoundDefault ?? s) : s[(pos + value.Length)..];
     }
 
-    public static string SubstringAfterLast(this string s, string value)
+    public static string SubstringAfterLast(this string s, string value, string? notFoundDefault = null)
     {
         var pos = s.LastIndexOf(value, StringComparison.Ordinal);
-        return pos == -1 ? s : s[(pos + value.Length)..];
+        return pos == -1 ? (notFoundDefault ?? s) : s[(pos + value.Length)..];
     }
 
-    public static string SubstringBefore(this string s, string value)
+    public static string SubstringBefore(this string s, string value, string? notFoundDefault = null)
     {
         var pos = s.IndexOf(value, StringComparison.Ordinal);
-        return pos == -1 ? s : s[..pos];
+        return pos == -1 ? (notFoundDefault ?? s) : s[..pos];
     }
 
-    public static string SubstringBeforeLast(this string s, string value)
+    public static string SubstringBeforeLast(this string s, string value, string? notFoundDefault = null)
     {
         var pos = s.LastIndexOf(value, StringComparison.Ordinal);
-        return pos == -1 ? s : s[..pos];
+        return pos == -1 ? (notFoundDefault ?? s) : s[..pos];
     }
 
     public static string Replace(this string s, Regex r, string newValue)
